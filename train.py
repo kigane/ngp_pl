@@ -1,43 +1,36 @@
-import torch
-from torch import nn
-from opt import get_opts
-import os
 import glob
+import os
+
+import cv2
 import imageio
 import numpy as np
-import cv2
-from einops import rearrange
-
-# data
-from torch.utils.data import DataLoader
-from datasets import dataset_dict
-from datasets.ray_utils import axisangle_to_R, get_rays
-
-# models
-from kornia.utils.grid import create_meshgrid3d
-from models.networks import NGP
-from models.rendering import render, MAX_SAMPLES
-
+import torch
 # optimizer, losses
 from apex.optimizers import FusedAdam
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from losses import NeRFLoss
-
-# metrics
-from torchmetrics import (
-    PeakSignalNoiseRatio, 
-    StructuralSimilarityIndexMeasure
-)
-from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
-
+from einops import rearrange
+# models
+from kornia.utils.grid import create_meshgrid3d
+from pytorch_lightning import LightningModule, Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
+from pytorch_lightning.loggers import WandbLogger  # TensorBoardLogger
 # pytorch-lightning
 from pytorch_lightning.plugins import DDPPlugin
-from pytorch_lightning import LightningModule, Trainer
-from pytorch_lightning.callbacks import TQDMProgressBar, ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities.distributed import all_gather_ddp_if_available
+from torch import nn
+from torch.optim.lr_scheduler import CosineAnnealingLR
+# data
+from torch.utils.data import DataLoader
+# metrics
+from torchmetrics import PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure
+from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
-from utils import slim_ckpt, load_ckpt
+from datasets import dataset_dict
+from datasets.ray_utils import axisangle_to_R, get_rays
+from losses import NeRFLoss
+from models.networks import NGP
+from models.rendering import MAX_SAMPLES, render
+from opt import get_opts
+from utils import load_ckpt, slim_ckpt
 
 import warnings; warnings.filterwarnings("ignore")
 
@@ -69,13 +62,16 @@ class NeRFSystem(LightningModule):
 
         rgb_act = 'None' if self.hparams.use_exposure else 'Sigmoid'
         self.model = NGP(scale=self.hparams.scale, rgb_act=rgb_act)
-        G = self.model.grid_size
-        self.model.register_buffer('density_grid',
+        G = self.model.grid_size # 128
+        self.model.register_buffer('density_grid', # multi-scale：cascades层，每层grid的大小为G**3
             torch.zeros(self.model.cascades, G**3))
-        self.model.register_buffer('grid_coords',
+        self.model.register_buffer('grid_coords', # (1, G, G, G, 3) -> (G**3, 3)
             create_meshgrid3d(G, G, G, False, dtype=torch.int32).reshape(-1, 3))
 
     def forward(self, batch, split):
+        """
+        get volume rendering result
+        """
         if split=='train':
             poses = self.poses[batch['img_idxs']]
             directions = self.directions[batch['pix_idxs']]
@@ -100,6 +96,9 @@ class NeRFSystem(LightningModule):
         return render(self.model, rays_o, rays_d, **kwargs)
 
     def setup(self, stage):
+        """
+        setup dataset for each machine
+        """
         dataset = dataset_dict[self.hparams.dataset_name]
         kwargs = {'root_dir': self.hparams.root_dir,
                   'downsample': self.hparams.downsample}
@@ -110,6 +109,9 @@ class NeRFSystem(LightningModule):
         self.test_dataset = dataset(split='test', **kwargs)
 
     def configure_optimizers(self):
+        """
+        define optimizers and LR schedulers
+        """
         # define additional parameters
         self.register_buffer('directions', self.train_dataset.directions.to(self.device))
         self.register_buffer('poses', self.train_dataset.poses.to(self.device))
@@ -156,7 +158,12 @@ class NeRFSystem(LightningModule):
                                         self.poses,
                                         self.train_dataset.img_wh)
 
-    def training_step(self, batch, batch_nb, *args):
+    def training_step(self, batch, batch_idx, *args):
+        """
+        the complete training loop
+        batch: dataloader的内容
+        batch_idx: 索引
+        """
         if self.global_step%self.update_interval == 0:
             self.model.update_density_grid(0.01*MAX_SAMPLES/3**0.5,
                                            warmup=self.global_step<self.warmup_steps,
@@ -190,7 +197,7 @@ class NeRFSystem(LightningModule):
             self.val_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}'
             os.makedirs(self.val_dir, exist_ok=True)
 
-    def validation_step(self, batch, batch_nb):
+    def validation_step(self, batch, batch_idx):
         rgb_gt = batch['rgb']
         results = self(batch, split='test')
 
@@ -223,6 +230,9 @@ class NeRFSystem(LightningModule):
         return logs
 
     def validation_epoch_end(self, outputs):
+        """
+        outputs: validation_step返回值组成的list
+        """
         psnrs = torch.stack([x['psnr'] for x in outputs])
         mean_psnr = all_gather_ddp_if_available(psnrs).mean()
         self.log('test/psnr', mean_psnr, True)
@@ -257,9 +267,14 @@ if __name__ == '__main__':
                               save_top_k=-1)
     callbacks = [ckpt_cb, TQDMProgressBar(refresh_rate=1)]
 
-    logger = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}",
-                               name=hparams.exp_name,
-                               default_hp_metric=False)
+    # logger = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}",
+    #                            name=hparams.exp_name,
+    #                            default_hp_metric=False)
+
+    logger = WandbLogger(save_dir=f"logs/{hparams.dataset_name}",
+                         project="NeRF",
+                         name=hparams.exp_name,
+                         log_model=True)  # 最后保存一次模型
 
     trainer = Trainer(max_epochs=hparams.num_epochs,
                       check_val_every_n_epoch=hparams.num_epochs,
@@ -273,7 +288,7 @@ if __name__ == '__main__':
                       num_sanity_val_steps=-1 if hparams.val_only else 0,
                       precision=16)
 
-    trainer.fit(system, ckpt_path=hparams.ckpt_path)
+    trainer.fit(system, ckpt_path=hparams.ckpt_path) # if ckpt_path is not none, resume training.
 
     if not hparams.val_only: # save slimmed ckpt for the last epoch
         ckpt_ = \
