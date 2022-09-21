@@ -62,7 +62,7 @@ def get_rays(directions, c2w):
         rays_d = directions @ c2w[:, :3].T
     else:
         rays_d = rearrange(directions, 'n c -> n 1 c') @ \
-                 rearrange(c2w[..., :3], 'n a b -> n b a')
+                 rearrange(c2w[..., :3], 'n a b -> n b a') # (I*c2w)^T = c2w^T*I
         rays_d = rearrange(rays_d, 'n 1 c -> n c')
     # The origin of all rays is the camera origin in world coordinate
     rays_o = c2w[..., 3].expand_as(rays_d)

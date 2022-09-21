@@ -30,7 +30,7 @@ class NGP(nn.Module):
 
         # constants
         L = 16; F = 2; log2_T = 19; N_min = 16
-        b = np.exp(np.log(2048*scale/N_min)/(L-1))
+        b = np.exp(np.log(2048*scale/N_min)/(L-1)) # N_max = 2048*scale
         print(f'GridEncoding: Nmin={N_min} b={b:.5f} F={F} T=2^{log2_T} L={L}')
 
         self.xyz_encoder = \
@@ -102,7 +102,7 @@ class NGP(nn.Module):
         """
         x = (x-self.xyz_min)/(self.xyz_max-self.xyz_min)
         h = self.xyz_encoder(x)
-        sigmas = TruncExp.apply(h[:, 0])
+        sigmas = TruncExp.apply(h[:, 0]) # sigma = exp{x}
         if return_feat: return sigmas, h
         return sigmas
 
