@@ -1,0 +1,37 @@
+root_dir: data/lego               # root directory of dataset
+dataset_name: nerf                # [nerf | nsvf | colmap | nerfpp | rtmv] which dataset to train/test
+style_id: 0                       # which style image to use
+split: train                      # [train | trainval| trainvaltest] use which split to train
+downsample: 1.0                   # downsample factor (<=1.0) for the images
+
+#-------------------------------model----------------------------------------
+
+scale: 0.5                        # scene scale (whole scene must lie in [-scale, scale]^3
+use_exposure: False               # whether to train in HDR-NeRF setting
+
+#-------------------------------training-------------------------------------
+
+distortion_loss_w: 0.0            # weight of distortion loss (see losses.py), 0 to disable (default), to enable, a good value is 1e-3 for real scene and 1e-2 for synthetic scene
+
+batch_size: 8192                  # number of rays in a batch
+ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
+num_epochs: 20                    # number of training epochs
+lr: 1.e-2                         # learning rate
+
+# experimental args
+optimize_ext: False               # whether to optimize extrinsics
+random_bg: False                  # whether to train with random bg color (real scene only) to avoid objects with black color to be predicted as transparent
+
+#-------------------------------validation-----------------------------------
+
+eval_lpips: False                 # evaluate lpips metric (consumes more VRAM)
+val_only: False                   # run only validation (need to provide ckpt_path)
+no_save_test: False               # whether to save test image and video
+
+#-------------------------------misc-----------------------------------------
+
+exp_name: exp                     # experiment name
+# pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
+ckpt_path: null  
+# pretrained checkpoint to load (excluding optimizers, etc)                 
+weight_path: null

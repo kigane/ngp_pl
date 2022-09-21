@@ -1,4 +1,50 @@
+import argparse
+import os
+
+import cv2
+import numpy as np
 import torch
+import yaml
+
+
+def parse_args():
+    """read args from two config files specified by --basic and --config
+       default are config/basic.yml and config/config.yml
+    """
+    desc = "NeRF Style Transfer"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('--basic', type=str,
+                        default='config/basic.yml', help='basic options')
+    parser.add_argument('--config', type=str,
+                        default='config/config.yml', help='specific options')
+    return check_args(parser.parse_args())
+
+
+def check_args(args):
+    """combine arguments"""
+    with open(args.basic, 'r') as f:
+        basic_config = yaml.safe_load(f)
+    with open(args.config, 'r') as f:
+        specific_config = yaml.safe_load(f)
+    args_dict = vars(args)
+    args_dict.update(basic_config)
+    args_dict.update(specific_config)
+    return args
+
+
+def check_folder(log_dir):
+    if not os.path.exists(log_dir):
+        print(f'* {log_dir} does not exist, creating...')
+        os.makedirs(log_dir)
+    return log_dir
+
+
+def depth2img(depth):
+    depth = (depth-depth.min())/(depth.max()-depth.min())
+    depth_img = cv2.applyColorMap((depth*255).astype(np.uint8),
+                                  cv2.COLORMAP_TURBO)
+
+    return depth_img
 
 
 def extract_model_state_dict(ckpt_path, model_name='model', prefixes_to_ignore=[]):

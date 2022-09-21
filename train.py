@@ -30,17 +30,9 @@ from losses import NeRFLoss
 from models.networks import NGP
 from models.rendering import MAX_SAMPLES, render
 from opt import get_opts
-from utils import load_ckpt, slim_ckpt
+from utils import depth2img, load_ckpt, slim_ckpt
 
 import warnings; warnings.filterwarnings("ignore")
-
-
-def depth2img(depth):
-    depth = (depth-depth.min())/(depth.max()-depth.min())
-    depth_img = cv2.applyColorMap((depth*255).astype(np.uint8),
-                                  cv2.COLORMAP_TURBO)
-
-    return depth_img
 
 
 class NeRFSystem(LightningModule):
