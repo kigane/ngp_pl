@@ -74,7 +74,7 @@ class NeRFSystem(LightningModule):
         """
         if split=='train':
             poses = self.poses[batch['img_idxs']]
-            directions = self.directions[batch['pix_idxs']]
+            directions = self.directions[batch['pix_idxs']] # ray的direction是由像素位置决定的
         else:
             poses = batch['pose']
             directions = self.directions

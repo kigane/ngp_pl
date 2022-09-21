@@ -26,8 +26,8 @@ __global__ void composite_train_fw_kernel(
 
     while (samples < N_samples) {
         const int s = start_idx + samples;
-        const scalar_t a = 1.0f - __expf(-sigmas[s]*deltas[s]);
-        const scalar_t w = a * T; // weight of the sample point
+        const scalar_t a = 1.0f - __expf(-sigmas[s]*deltas[s]); // alpha
+        const scalar_t w = a * T; // weight of the sample point // Tr * alpha
 
         rgb[ray_idx][0] += w*rgbs[s][0];
         rgb[ray_idx][1] += w*rgbs[s][1];
@@ -35,8 +35,7 @@ __global__ void composite_train_fw_kernel(
         depth[ray_idx] += w*ts[s];
         opacity[ray_idx] += w;
         ws[s] = w;
-        T *= 1.0f-a;
-
+        T *= 1.0f-a; // Tr = \prod_i{1-\alpha_i}
         if (T <= T_threshold) break; // ray has enough opacity
         samples++;
     }
