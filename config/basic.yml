@@ -1,2 +1,3 @@
 num_gpus: 1             # number of gpus
 use_wandb: False        # use wandb or tensorboard
+loop_times: 3           # train nerf->decoder loop times
