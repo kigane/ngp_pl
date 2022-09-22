@@ -17,16 +17,16 @@ class NGP(nn.Module):
 
         # scene bounding box
         self.scale = scale
-        self.register_buffer('center', torch.zeros(1, 3))
-        self.register_buffer('xyz_min', -torch.ones(1, 3)*scale)
-        self.register_buffer('xyz_max', torch.ones(1, 3)*scale)
+        self.register_buffer('center', torch.zeros(1, 3).cuda())
+        self.register_buffer('xyz_min', -torch.ones(1, 3).cuda()*scale)
+        self.register_buffer('xyz_max', torch.ones(1, 3).cuda()*scale)
         self.register_buffer('half_size', (self.xyz_max-self.xyz_min)/2)
 
         # each density grid covers [-2^(k-1), 2^(k-1)]^3 for k in [0, C-1]
         self.cascades = max(1+int(np.ceil(np.log2(2*scale))), 1)
         self.grid_size = 128
         self.register_buffer('density_bitfield',
-            torch.zeros(self.cascades*self.grid_size**3//8, dtype=torch.uint8))
+            torch.zeros(self.cascades*self.grid_size**3//8, dtype=torch.uint8).cuda())
 
         # constants
         L = 16; F = 2; log2_T = 19; N_min = 16
@@ -100,6 +100,7 @@ class NGP(nn.Module):
         Outputs:
             sigmas: (N)
         """
+        x.cuda()
         x = (x-self.xyz_min)/(self.xyz_max-self.xyz_min)
         h = self.xyz_encoder(x)
         # sigma = exp{x}
@@ -182,9 +183,9 @@ class NGP(nn.Module):
             # uniform cells
             coords1 = torch.randint(self.grid_size, (M, 3), dtype=torch.int32,
                                     device=self.density_grid.device)
-            indices1 = vren.morton3D(coords1).long()
+            indices1 = vren.morton3D(coords1).long().cuda()
             # occupied cells
-            indices2 = torch.nonzero(self.density_grid[c]>density_threshold)[:, 0]
+            indices2 = torch.nonzero(self.density_grid[c]>density_threshold)[:, 0].cuda()
             if len(indices2)>0:
                 rand_idx = torch.randint(len(indices2), (M,),
                                          device=self.density_grid.device)
@@ -241,7 +242,9 @@ class NGP(nn.Module):
 
     @torch.no_grad()
     def update_density_grid(self, density_threshold, warmup=False, decay=0.95, erode=False):
-        density_grid_tmp = torch.zeros_like(self.density_grid)
+        from icecream import ic
+        ic(density_threshold)
+        density_grid_tmp = torch.zeros_like(self.density_grid).half().cuda()
         if warmup: # during the first steps
             cells = self.get_all_cells()
         else:

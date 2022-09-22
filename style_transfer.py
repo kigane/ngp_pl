@@ -1,6 +1,7 @@
 import imageio
 import numpy as np
 import torch
+from tqdm import tqdm
 # optimizer, losses
 from apex.optimizers import FusedAdam
 # models
