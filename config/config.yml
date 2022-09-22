@@ -30,8 +30,26 @@ no_save_test: False               # whether to save test image and video
 
 #-------------------------------misc-----------------------------------------
 
-exp_name: exp                     # experiment name
+exp_name: LEGO                     # experiment name
 # pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
 ckpt_path: null  
 # pretrained checkpoint to load (excluding optimizers, etc)                 
 weight_path: null
+
+# checkpoints: 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
+# logs: 'logs/dataset_name/exp_name/'
+# results: 'results/dataset_name/exp_name/xxx.png|xxx_d.png'
+# results: 'results/dataset_name/exp_name/#loop/xxx.png|xxx_d.png'
+
+#-------------------------------style transfer-------------------------------
+
+ckpt_path_st: null
+num_epochs_st: 30
+batch_size_st: 16
+lr_st: 1.e-4
+style_img: data/styles/0.png
+vgg_pretrained: data/pretrained/vgg.pth
+decoder_pretrained: data/pretrained/decoder.pth
+content_weight: 1.0
+style_weight: 10.0
+

@@ -12,7 +12,7 @@ from einops import rearrange
 from kornia.utils.grid import create_meshgrid3d
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
-from pytorch_lightning.loggers import WandbLogger  # TensorBoardLogger
+from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
 # pytorch-lightning
 from pytorch_lightning.plugins import DDPPlugin
 from pytorch_lightning.utilities.distributed import all_gather_ddp_if_available
@@ -29,8 +29,8 @@ from datasets.ray_utils import axisangle_to_R, get_rays
 from losses import NeRFLoss
 from models.networks import NGP
 from models.rendering import MAX_SAMPLES, render
-from opt import get_opts
-from utils import depth2img, load_ckpt, slim_ckpt
+from utils import depth2img, load_ckpt, slim_ckpt, parse_args
+from style_transfer import StyleTransferSystem
 
 import warnings; warnings.filterwarnings("ignore")
 
@@ -119,6 +119,7 @@ class NeRFSystem(LightningModule):
 
         net_params = []
         for n, p in self.named_parameters():
+            print(f"{n}:{p.shape}")
             if n not in ['dR', 'dT']: net_params += [p]
 
         opts = []
@@ -186,11 +187,16 @@ class NeRFSystem(LightningModule):
     def on_validation_start(self):
         torch.cuda.empty_cache()
         if not self.hparams.no_save_test:
-            self.val_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}'
+            # 区分NeRF和NeRF Style Transfer任务
+            if self.hparams.loop == -1:
+                self.val_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}'
+            else:
+                self.val_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/{self.hparams.loop}'
             os.makedirs(self.val_dir, exist_ok=True)
 
     def validation_step(self, batch, batch_idx):
         rgb_gt = batch['rgb']
+        pose = batch['pose']
         results = self(batch, split='test')
 
         logs = {}
@@ -218,6 +224,8 @@ class NeRFSystem(LightningModule):
             depth = depth2img(rearrange(results['depth'].cpu().numpy(), '(h w) -> h w', h=h))
             imageio.imsave(os.path.join(self.val_dir, f'{idx:03d}.png'), rgb_pred)
             imageio.imsave(os.path.join(self.val_dir, f'{idx:03d}_d.png'), depth)
+            if self.hparams.loop > -1:
+                logs['pose'] = pose.cpu().numpy()
 
         return logs
 
@@ -237,6 +245,10 @@ class NeRFSystem(LightningModule):
             lpipss = torch.stack([x['lpips'] for x in outputs])
             mean_lpips = all_gather_ddp_if_available(lpipss).mean()
             self.log('test/lpips_vgg', mean_lpips)
+        
+        if self.hparams.loop > -1:
+            img_pose = np.stack([x['pose'] for x in outputs], axis=0)
+            np.save('poses.npy', img_pose)
 
     def get_progress_bar_dict(self):
         # don't show the version number
@@ -246,9 +258,10 @@ class NeRFSystem(LightningModule):
 
 
 if __name__ == '__main__':
-    hparams = get_opts()
+    hparams = parse_args()
     if hparams.val_only and (not hparams.ckpt_path):
         raise ValueError('You need to provide a @ckpt_path for validation!')
+    
     system = NeRFSystem(hparams)
 
     ckpt_cb = ModelCheckpoint(dirpath=f'ckpts/{hparams.dataset_name}/{hparams.exp_name}',
@@ -259,14 +272,14 @@ if __name__ == '__main__':
                               save_top_k=-1)
     callbacks = [ckpt_cb, TQDMProgressBar(refresh_rate=1)]
 
-    # logger = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}",
-    #                            name=hparams.exp_name,
-    #                            default_hp_metric=False)
+    logger = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}",
+                               name=hparams.exp_name,
+                               default_hp_metric=False)
 
-    logger = WandbLogger(save_dir=f"logs/{hparams.dataset_name}",
-                         project="NeRF",
-                         name=hparams.exp_name,
-                         log_model=True)  # 最后保存一次模型
+    # logger = WandbLogger(save_dir=f"logs/{hparams.dataset_name}",
+    #                      project="NeRF",
+    #                      name=hparams.exp_name,
+    #                      log_model=True)  # 最后保存一次模型
 
     trainer = Trainer(max_epochs=hparams.num_epochs,
                       check_val_every_n_epoch=hparams.num_epochs,
@@ -298,3 +311,37 @@ if __name__ == '__main__':
         imageio.mimsave(os.path.join(system.val_dir, 'depth.mp4'),
                         [imageio.imread(img) for img in imgs[1::2]],
                         fps=30, macro_block_size=1)
+    
+    # 不进行StyleTransfer
+    if hparams.loop == -1:
+        exit()
+    
+    style_system = StyleTransferSystem(hparams)
+    
+    ckpt_cb_st = ModelCheckpoint(dirpath=f'ckpts/{hparams.dataset_name}/{hparams.exp_name}',
+                              filename='{epoch:d}',
+                              save_weights_only=True,
+                              every_n_epochs=hparams.num_epochs_st,
+                              save_on_train_epoch_end=True,
+                              save_top_k=-1)
+    
+    callbacks_st = [ckpt_cb_st, TQDMProgressBar(refresh_rate=1)]
+    
+    logger_st = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}/style",
+                               name=hparams.exp_name,
+                               default_hp_metric=False)
+    
+    trainer_st = Trainer(max_epochs=hparams.num_epochs_st,
+                    #   check_val_every_n_epoch=hparams.num_epochs_st,
+                      callbacks=callbacks_st,
+                      logger=logger_st,
+                      enable_model_summary=False,
+                      accelerator='gpu',
+                      devices=hparams.num_gpus,
+                      strategy=DDPPlugin(find_unused_parameters=False)
+                               if hparams.num_gpus>1 else None,
+                      num_sanity_val_steps=-1 if hparams.val_only else 0,
+                      precision=16)
+
+    trainer_st.fit(style_system, ckpt_path=hparams.ckpt_path_st)
+    

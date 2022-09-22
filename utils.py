@@ -17,6 +17,8 @@ def parse_args():
                         default='config/basic.yml', help='basic options')
     parser.add_argument('--config', type=str,
                         default='config/config.yml', help='specific options')
+    parser.add_argument('--loop', type=int,
+                        default=-1, help='number of loop(nerf->style_transfer)')
     return check_args(parser.parse_args())
 
 
