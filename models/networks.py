@@ -102,7 +102,8 @@ class NGP(nn.Module):
         """
         x = (x-self.xyz_min)/(self.xyz_max-self.xyz_min)
         h = self.xyz_encoder(x)
-        sigmas = TruncExp.apply(h[:, 0]) # sigma = exp{x}
+        # sigma = exp{x}
+        sigmas = TruncExp.apply(h[:, 0]) 
         if return_feat: return sigmas, h
         return sigmas
 
@@ -210,17 +211,18 @@ class NGP(nn.Module):
         self.count_grid = torch.zeros_like(self.density_grid)
         w2c_R = rearrange(poses[:, :3, :3], 'n a b -> n b a') # (N_cams, 3, 3)
         w2c_T = -w2c_R@poses[:, :3, 3:] # (N_cams, 3, 1)
-        cells = self.get_all_cells()
+        cells = self.get_all_cells() # cascades个tuple的list
         for c in range(self.cascades):
+            # 128**3, 128**3
             indices, coords = cells[c]
             for i in range(0, len(indices), chunk):
-                xyzs = coords[i:i+chunk]/(self.grid_size-1)*2-1
+                xyzs = coords[i:i+chunk]/(self.grid_size-1)*2-1 # [-1, 1]^3
                 s = min(2**(c-1), self.scale)
                 half_grid_size = s/self.grid_size
                 xyzs_w = (xyzs*(s-half_grid_size)).T # (3, chunk)
                 xyzs_c = w2c_R @ xyzs_w + w2c_T # (N_cams, 3, chunk)
-                uvd = K @ xyzs_c # (N_cams, 3, chunk)
-                uv = uvd[:, :2]/uvd[:, 2:] # (N_cams, 2, chunk)
+                uvd = K @ xyzs_c # (N_cams, 3, chunk) #? 正交投影
+                uv = uvd[:, :2]/uvd[:, 2:] # (N_cams, 2, chunk) #? why
                 in_image = (uvd[:, 2]>=0)& \
                            (uv[:, 0]>=0)&(uv[:, 0]<img_wh[0])& \
                            (uv[:, 1]>=0)&(uv[:, 1]<img_wh[1])
@@ -258,12 +260,13 @@ class NGP(nn.Module):
         if erode:
             # My own logic. decay more the cells that are visible to few cameras
             decay = torch.clamp(decay**(1/self.count_grid), 0.1, 0.95)
+        # 标记为-1的不可见cell不更新
         self.density_grid = \
             torch.where(self.density_grid<0,
                         self.density_grid,
                         torch.maximum(self.density_grid*decay, density_grid_tmp))
 
         mean_density = self.density_grid[self.density_grid>0].mean().item()
-
+        # 用一个bit标记8个顶点中大于threshold的。
         vren.packbits(self.density_grid, min(mean_density, density_threshold),
                       self.density_bitfield)
