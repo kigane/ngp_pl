@@ -12,7 +12,7 @@ from einops import rearrange
 from kornia.utils.grid import create_meshgrid3d
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
-from pytorch_lightning.loggers import WandbLogger  # TensorBoardLogger
+from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
 # pytorch-lightning
 from pytorch_lightning.plugins import DDPPlugin
 from pytorch_lightning.utilities.distributed import all_gather_ddp_if_available
@@ -267,14 +267,14 @@ if __name__ == '__main__':
                               save_top_k=-1)
     callbacks = [ckpt_cb, TQDMProgressBar(refresh_rate=1)]
 
-    # logger = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}",
-    #                            name=hparams.exp_name,
-    #                            default_hp_metric=False)
+    logger = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}",
+                               name=hparams.exp_name,
+                               default_hp_metric=False)
 
-    logger = WandbLogger(save_dir=f"logs/{hparams.dataset_name}",
-                         project="NeRF",
-                         name=hparams.exp_name,
-                         log_model=True)  # 最后保存一次模型
+    # logger = WandbLogger(save_dir=f"logs/{hparams.dataset_name}",
+    #                      project="NeRF",
+    #                      name=hparams.exp_name,
+    #                      log_model=True)  # 最后保存一次模型
 
     trainer = Trainer(max_epochs=hparams.num_epochs,
                       check_val_every_n_epoch=hparams.num_epochs,
