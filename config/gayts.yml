@@ -1,0 +1,3 @@
+height: 800
+init_method: content
+vgg_ckpt_path: data/pretained/vgg_normalised.pth

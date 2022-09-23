@@ -1,11 +1,16 @@
 import argparse
 import os
 
-import cv2
+import cv2 as cv
 import numpy as np
 import torch
 import yaml
 
+from torchvision import transforms
+from constants import IMAGENET_MEAN_255, IMAGENET_STD_NEUTRAL
+
+
+#------------------------------args------------------------------------------
 
 def parse_args():
     """read args from two config files specified by --basic and --config
@@ -41,13 +46,54 @@ def check_folder(log_dir):
     return log_dir
 
 
-def depth2img(depth):
-    depth = (depth-depth.min())/(depth.max()-depth.min())
-    depth_img = cv2.applyColorMap((depth*255).astype(np.uint8),
-                                  cv2.COLORMAP_TURBO)
+#----------------------------image utils-------------------------------------
 
+def load_image(img_path, target_shape=None):
+    if not os.path.exists(img_path):
+        raise Exception(f'Path does not exist: {img_path}')
+    img = cv.imread(img_path)[:, :, ::-1]  # [:, :, ::-1] converts BGR (opencv format...) into RGB
+
+    if target_shape is not None:  # resize section
+        if isinstance(target_shape, int) and target_shape != -1:  # scalar -> implicitly setting the height
+            current_height, current_width = img.shape[:2]
+            new_height = target_shape
+            new_width = int(current_width * (new_height / current_height))
+            img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_CUBIC)
+        else:  # set both dimensions to target shape
+            img = cv.resize(img, (target_shape[1], target_shape[0]), interpolation=cv.INTER_CUBIC)
+
+    # this need to go after resizing - otherwise cv.resize will push values outside of [0,1] range
+    img = img.astype(np.float32)  # convert from uint8 to float32
+    img /= 255.0  # get to [0, 1] range
+    return img
+
+
+def prepare_img(img_path, target_shape, device):
+    img = load_image(img_path, target_shape=target_shape)
+
+    # normalize using ImageNet's mean
+    # [0, 255] range worked much better for me than [0, 1] range (even though PyTorch models were trained on latter)
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Lambda(lambda x: x.mul(255)),
+        transforms.Normalize(mean=IMAGENET_MEAN_255, std=IMAGENET_STD_NEUTRAL)
+    ])
+
+    img = transform(img).to(device).unsqueeze(0)
+
+    return img
+
+
+def depth2img(depth):
+    """
+    生成深度热力图
+    """
+    depth = (depth-depth.min())/(depth.max()-depth.min())
+    depth_img = cv.applyColorMap((depth*255).astype(np.uint8),
+                                  cv.COLORMAP_TURBO)
     return depth_img
 
+#-------------------------------model----------------------------------------
 
 def extract_model_state_dict(ckpt_path, model_name='model', prefixes_to_ignore=[]):
     checkpoint = torch.load(ckpt_path, map_location='cpu')

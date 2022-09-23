@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms as tf
 
 import models.transfer_net as net
-from datasets.style_transfer import SimpleDataset
+from datasets.style_transfer_dataset import SimpleDataset
 from models.johnson_net import TransformerNet
 from utils import parse_args
 
@@ -45,7 +45,7 @@ class JohnsonSystem(LightningModule):
         # loss
         vgg = net.vgg
         self.vgg19 = nn.Sequential(*list(vgg.children())[:31])
-        self.loss_fn = GaytsLoss()
+        self.loss_fn = GaytsLoss() #TODO
 
         # model
         self.model = TransformerNet()
