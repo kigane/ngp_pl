@@ -1,8 +1,22 @@
 import os
+
+import imageio
+import numpy as np
 import torch
 from torch.utils.data import Dataset
-import numpy as np
-import imageio
+
+
+class SimpleDataset(Dataset):
+    def __init__(self, dir) -> None:
+        super().__init__()
+        self.img_paths = os.listdir(dir)
+    
+    def __len__(self):
+        return len(self.img_paths)
+    
+    def __getitem__(self, index):
+        img = imageio.imread(self.img_paths[index]).astype(np.float32)/255.0
+        return torch.FloatTensor(img)
 
 
 class NeRFRetDataset(Dataset):
