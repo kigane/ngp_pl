@@ -3,7 +3,7 @@ from .nsvf import NSVFDataset
 from .colmap import ColmapDataset
 from .nerfpp import NeRFPPDataset
 from .rtmv import RTMVDataset
-from .style_transfer import NeRFRetDataset, StylizedDataest
+from .style_transfer_dataset import NeRFRetDataset, StylizedDataest
 
 
 dataset_dict = {

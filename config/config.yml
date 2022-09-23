@@ -1,8 +1,8 @@
 root_dir: data/lego               # root directory of dataset
-dataset_name: nerf                # [nerf | nsvf | colmap | nerfpp | rtmv] which dataset to train/test
-style_id: 0                       # which style image to use
-split: train                      # [train | trainval| trainvaltest] use which split to train
+dataset_name: nerf                # [nerf | nsvf | colmap | nerfpp | rtmv] 
+split: train                      # [train | trainval| trainvaltest] 
 downsample: 1.0                   # downsample factor (<=1.0) for the images
+loop: 1                           # number of loop(nerf->style transfer)
 
 #-------------------------------model----------------------------------------
 
@@ -15,7 +15,7 @@ distortion_loss_w: 0.0            # weight of distortion loss (see losses.py), 0
 
 batch_size: 8192                  # number of rays in a batch
 ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
-num_epochs: 20                    # number of training epochs
+num_epochs: 3                     # number of training epochs
 lr: 1.e-2                         # learning rate
 
 # experimental args
@@ -43,13 +43,13 @@ weight_path: null
 
 #-------------------------------style transfer-------------------------------
 
+style_img: data/styles/0.jpg
+vgg_pretrained: data/pretained/vgg_normalised.pth
+decoder_pretrained: data/pretrained/decoder.pth
+
 ckpt_path_st: null
 num_epochs_st: 30
 batch_size_st: 16
 lr_st: 1.e-4
-style_img: data/styles/0.png
-vgg_pretrained: data/pretrained/vgg.pth
-decoder_pretrained: data/pretrained/decoder.pth
 content_weight: 1.0
 style_weight: 10.0
-

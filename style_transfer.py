@@ -21,11 +21,10 @@ class StyleTransferSystem(LightningModule):
     def __init__(self, hparams):
         super().__init__()
         self.save_hyperparameters(hparams)
-        vgg_ckpt = ''
-        decoder_ckpt = ''
         vgg, decoder = Net.vgg, Net.decoder
-        vgg.load_state_dict(torch.load(vgg_ckpt))
-        decoder.load_state_dict(torch.load(decoder_ckpt))
+        vgg.load_state_dict(torch.load(hparams.vgg_ckpt))
+        if hparams.decoder_ckpt is not None:
+            decoder.load_state_dict(torch.load(hparams.decoder_ckpt))
         vgg = nn.Sequential(*list(vgg.children())[:31])
         self.model = Net.StyleTransferNet(vgg, decoder)
         

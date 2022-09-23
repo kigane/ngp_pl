@@ -1,3 +1,4 @@
+from datetime import datetime
 import glob
 import os
 
@@ -30,7 +31,10 @@ from losses import NeRFLoss
 from models.networks import NGP
 from models.rendering import MAX_SAMPLES, render
 from utils import depth2img, load_ckpt, slim_ckpt, parse_args
-from style_transfer import StyleTransferSystem
+from icecream import ic
+
+ic.configureOutput(prefix=lambda: datetime.now().strftime('%y-%m-%d %H:%M:%S | '),
+                   includeContext=False)
 
 import warnings; warnings.filterwarnings("ignore")
 
@@ -189,7 +193,7 @@ class NeRFSystem(LightningModule):
         if not self.hparams.no_save_test:
             # 区分NeRF和NeRF Style Transfer任务
             if self.hparams.loop == -1:
-                self.val_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}'
+                self.val_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/raw'
             else:
                 self.val_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/{self.hparams.loop}'
             os.makedirs(self.val_dir, exist_ok=True)
@@ -248,7 +252,7 @@ class NeRFSystem(LightningModule):
         
         if self.hparams.loop > -1:
             img_pose = np.stack([x['pose'] for x in outputs], axis=0)
-            np.save('poses.npy', img_pose)
+            np.save(f'{self.val_dir}/poses.npy', img_pose)
 
     def get_progress_bar_dict(self):
         # don't show the version number
@@ -316,32 +320,8 @@ if __name__ == '__main__':
     if hparams.loop == -1:
         exit()
     
-    style_system = StyleTransferSystem(hparams)
-    
-    ckpt_cb_st = ModelCheckpoint(dirpath=f'ckpts/{hparams.dataset_name}/{hparams.exp_name}',
-                              filename='{epoch:d}',
-                              save_weights_only=True,
-                              every_n_epochs=hparams.num_epochs_st,
-                              save_on_train_epoch_end=True,
-                              save_top_k=-1)
-    
-    callbacks_st = [ckpt_cb_st, TQDMProgressBar(refresh_rate=1)]
-    
-    logger_st = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}/style",
-                               name=hparams.exp_name,
-                               default_hp_metric=False)
-    
-    trainer_st = Trainer(max_epochs=hparams.num_epochs_st,
-                    #   check_val_every_n_epoch=hparams.num_epochs_st,
-                      callbacks=callbacks_st,
-                      logger=logger_st,
-                      enable_model_summary=False,
-                      accelerator='gpu',
-                      devices=hparams.num_gpus,
-                      strategy=DDPPlugin(find_unused_parameters=False)
-                               if hparams.num_gpus>1 else None,
-                      num_sanity_val_steps=-1 if hparams.val_only else 0,
-                      precision=16)
-
-    trainer_st.fit(style_system, ckpt_path=hparams.ckpt_path_st)
-    
+    ret_dir = system.val_dir
+    ic(ret_dir)
+    rgb_paths = [f"{ret_dir}/{name}" for name in os.listdir(ret_dir) if name.endswith('png') and 'd' not in name]
+    style_img = imageio.imread(hparams.style_image).astype(np.float32)/255.0   
+ 

@@ -8,7 +8,7 @@ import imageio
 class NeRFRetDataset(Dataset):
     def __init__(self, ret_dir) -> None:
         super().__init__()
-        self.rgb_img_paths = [ret_dir+name for name in os.listdir(ret_dir) if name.endswith('png') and 'd' not in name]
+        self.rgb_img_paths = [f"{ret_dir}/{name}" for name in os.listdir(ret_dir) if name.endswith('png') and 'd' not in name]
     
     def __len__(self):
         return len(self.rgb_img_paths)
@@ -22,7 +22,7 @@ class StylizedDataest(Dataset):
     #TODO
     def __init__(self, ret_dir) -> None:
         super().__init__()
-        self.img_paths = [ret_dir+name for name in os.listdir(ret_dir) if '_s' in name]
+        self.img_paths = [f"{ret_dir}/{name}" for name in os.listdir(ret_dir) if '_s' in name]
         self.poses = np.load(os.path.join(ret_dir, 'poses.npy'))
     
     def __len__(self):
