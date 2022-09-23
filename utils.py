@@ -5,6 +5,7 @@ import cv2 as cv
 import numpy as np
 import torch
 import yaml
+import matplotlib.pyplot as plt
 
 from torchvision import transforms
 from constants import IMAGENET_MEAN_255, IMAGENET_STD_NEUTRAL
@@ -18,8 +19,6 @@ def parse_args():
     """
     desc = "NeRF Style Transfer"
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('--basic', type=str,
-                        default='config/basic.yml', help='basic options')
     parser.add_argument('--config', type=str,
                         default='config/config.yml', help='specific options')
     parser.add_argument('--loop', type=int,
@@ -29,12 +28,9 @@ def parse_args():
 
 def check_args(args):
     """combine arguments"""
-    with open(args.basic, 'r') as f:
-        basic_config = yaml.safe_load(f)
     with open(args.config, 'r') as f:
         specific_config = yaml.safe_load(f)
     args_dict = vars(args)
-    args_dict.update(basic_config)
     args_dict.update(specific_config)
     return args
 
@@ -84,6 +80,16 @@ def prepare_img(img_path, target_shape, device):
     return img
 
 
+def get_uint8_range(x):
+    if isinstance(x, np.ndarray):
+        x -= np.min(x)
+        x /= np.max(x)
+        x *= 255
+        return x
+    else:
+        raise ValueError(f'Expected numpy array got {type(x)}')
+
+
 def depth2img(depth):
     """
     生成深度热力图
@@ -131,3 +137,44 @@ def slim_ckpt(ckpt_path, save_poses=False):
     for k in keys_to_pop:
         ckpt['state_dict'].pop(k, None)
     return ckpt['state_dict']
+
+#-----------------------------style transfer---------------------------------
+
+def gram_matrix(x, should_normalize=True):
+    (b, ch, h, w) = x.size()
+    features = x.view(b, ch, w * h)
+    features_t = features.transpose(1, 2)
+    gram = features.bmm(features_t)
+    if should_normalize:
+        gram /= ch * h * w
+    return gram
+
+
+def total_variation(y):
+    return torch.sum(torch.abs(y[:, :, :, :-1] - y[:, :, :, 1:])) + \
+           torch.sum(torch.abs(y[:, :, :-1, :] - y[:, :, 1:, :]))
+
+
+# gayts
+def generate_out_img_name(id, hparams):
+    dir_name = hparams.out_dir
+    basename = f"{hparams.style_image}_{hparams.style_image}_{hparams.optimizer}_{id}"
+    return os.path.join(dir_name, basename)
+
+
+def save_and_maybe_display(optimizing_img, img_id, hparams, should_display=False):
+    saving_freq = hparams.saving_freq
+    out_img = optimizing_img.squeeze(axis=0).to('cpu').detach().numpy()
+    out_img = np.moveaxis(out_img, 0, 2)  # swap channel from 1st to 3rd position: ch, _, _ -> _, _, chr
+
+    # for saving_freq == -1 save only the final result (otherwise save with frequency saving_freq and save the last pic)
+    if img_id == hparams.iterations-1 or (saving_freq > 0 and img_id % saving_freq == 0):
+        out_img_name = str(img_id).zfill(4) + ".jpg" if saving_freq != -1 else generate_out_img_name(img_id, hparams)
+        dump_img = np.copy(out_img)
+        dump_img += np.array(IMAGENET_MEAN_255).reshape((1, 1, 3))
+        dump_img = np.clip(dump_img, 0, 255).astype('uint8')
+        cv.imwrite(os.path.join(hparams.out_dir, out_img_name), dump_img[:, :, ::-1])
+
+    if should_display:
+        plt.imshow(np.uint8(get_uint8_range(out_img)))
+        plt.show()

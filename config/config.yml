@@ -1,8 +1,15 @@
+#-------------------------------basic----------------------------------------
+
+num_gpus: 1             # number of gpus
+use_wandb: False        # use wandb or tensorboard
+
+#-------------------------------data-----------------------------------------
+
 root_dir: data/lego               # root directory of dataset
 dataset_name: nerf                # [nerf | nsvf | colmap | nerfpp | rtmv] 
 split: train                      # [train | trainval| trainvaltest] 
 downsample: 1.0                   # downsample factor (<=1.0) for the images
-loop: 1                           # number of loop(nerf->style transfer)
+# loop: 1                           # number of loop(nerf->style transfer)
 
 #-------------------------------model----------------------------------------
 
@@ -44,7 +51,7 @@ weight_path: null
 #-------------------------------style transfer-------------------------------
 
 style_img: data/styles/0.jpg
-vgg_pretrained: data/pretained/vgg_normalised.pth
+vgg_pretrained: data/pretrained/vgg_normalised.pth
 decoder_pretrained: data/pretrained/decoder.pth
 
 ckpt_path_st: null

@@ -1,3 +1,29 @@
+content_image: data/colmap/zl/images/20220905182457.png
+style_image: data/styles/3.jpg
 height: 800
 init_method: content
-vgg_ckpt_path: data/pretained/vgg_normalised.pth
+vgg_ckpt_path: data/pretrained/vgg_normalised.pth
+optimizer: lbfgs # [lbfgs | adam]
+iterations: 1000 # [ 1000 | 3000] correspond to optimizer
+saving_freq: 100 # -1:only save final image
+out_dir: results/gayts
+
+lr: 10
+content_weight: 100_000
+style_weight: 1_000
+tv_weight: 1
+
+features: 
+  - relu1_1
+  - relu2_1
+  - relu3_1
+  - relu4_1
+  - conv4_2
+  - relu5_1
+content_feature_index: 4
+style_features_indices: 
+  - 0
+  - 1
+  - 2
+  - 3
+  - 5
