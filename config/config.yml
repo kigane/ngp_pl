@@ -9,7 +9,6 @@ root_dir: data/lego               # root directory of dataset
 dataset_name: nerf                # [nerf | nsvf | colmap | nerfpp | rtmv] 
 split: train                      # [train | trainval| trainvaltest] 
 downsample: 1.0                   # downsample factor (<=1.0) for the images
-# loop: 1                           # number of loop(nerf->style transfer)
 
 #-------------------------------model----------------------------------------
 
@@ -37,9 +36,10 @@ no_save_test: False               # whether to save test image and video
 
 #-------------------------------misc-----------------------------------------
 
-exp_name: LEGO                     # experiment name
+exp_name: LEGO_ST                    # experiment name
 # pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
-ckpt_path: null  
+# ckpt_path: ckpts/nerf/LEGO_ST/epoch=2-v2.ckpt  # show_gui
+ckpt_path: null
 # pretrained checkpoint to load (excluding optimizers, etc)                 
 weight_path: null
 
@@ -50,13 +50,41 @@ weight_path: null
 
 #-------------------------------style transfer-------------------------------
 
-style_img: data/styles/0.jpg
+style_image: data/styles/8.jpg
 vgg_pretrained: data/pretrained/vgg_normalised.pth
 decoder_pretrained: data/pretrained/decoder.pth
+save_ext: .jpg
 
-ckpt_path_st: null
-num_epochs_st: 30
-batch_size_st: 16
-lr_st: 1.e-4
-content_weight: 1.0
-style_weight: 10.0
+# adain
+content_size: 800
+style_size: 800
+crop: False
+alpha: 1.0 # content [0 ------> 1] style
+
+# gayts
+# height: 800
+# init_method: content
+# vgg_ckpt_path: data/pretrained/vgg_normalised.pth #FIXME repeat
+# optimizer: adam # [lbfgs | adam]
+# iterations: 3000 # [ 1000 | 3000] correspond to optimizer
+# saving_freq: -1 # -1:only save final image
+
+# lr_st: 0.01
+# content_weight: 10
+# style_weight: 1
+# tv_weight: 0.001
+
+# features: 
+#   - relu1_1
+#   - relu2_1
+#   - relu3_1
+#   - relu4_1
+#   - conv4_2
+#   - relu5_1
+# content_feature_index: 4
+# style_features_indices: 
+#   - 0
+#   - 1
+#   - 2
+#   - 3
+#   - 5

@@ -48,9 +48,12 @@ def make_tuning_step(neural_net, optimizer, target_representations, hparams):
 def neural_style_transfer(content_img_path, style_img_path, hparams):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    ic("read content and style image")
     content_img = utils.prepare_img(content_img_path, hparams.height, device)
     style_img = utils.prepare_img(style_img_path, hparams.height, device)
 
+    # 待优化图像初始化
+    ic("initialize content image")
     if hparams.init_method == 'random':
         gaussian_noise_img = np.random.normal(loc=0, scale=90., size=content_img.shape).astype(np.float32)
         init_img = torch.from_numpy(gaussian_noise_img).float().to(device)
@@ -65,9 +68,12 @@ def neural_style_transfer(content_img_path, style_img_path, hparams):
     # 待优化的图像。优化完即为最终结果图。
     optimizing_img = Variable(init_img, requires_grad=True)
 
+    # features指定了从那些层返回特征
     encoder = tnet.VGGEncoder(hparams.vgg_ckpt_path, hparams.features)
+    encoder.to(device)
 
     #! 内容图像和风格图像分别喂给VGG，并返回特征图[relu1_1, relu2_1, relu3_1, conv4_2, relu4_1, relu5_1]
+    ic("extract features")
     content_img_set_of_feature_maps = encoder(content_img)
     style_img_set_of_feature_maps = encoder(style_img)
 
@@ -78,13 +84,14 @@ def neural_style_transfer(content_img_path, style_img_path, hparams):
     #
     # Start of optimization procedure
     #
+    ic('start optimizing')
     if hparams.optimizer == 'adam':
-        optimizer = Adam((optimizing_img,), lr=hparams.lr)
+        optimizer = Adam((optimizing_img,), lr=hparams.lr_st)
         tuning_step = make_tuning_step(encoder, optimizer, target_representations, hparams)
         for cnt in range(hparams.iterations):
             total_loss, content_loss, style_loss, tv_loss = tuning_step(optimizing_img)
             with torch.no_grad():
-                print(f'Adam | iteration: {cnt:03}, total loss={total_loss.item():12.4f}, content_loss={hparams.content_weight * content_loss.item():12.4f}, style loss={hparams.style_weight * style_loss.item():12.4f}, tv loss={hparams.tv_weight * tv_loss.item():12.4f}')
+                print(f'Adam | iteration: {cnt:03}, total loss={total_loss.item():12.2f}, content_loss={hparams.content_weight * content_loss.item():12.2f}, style loss={hparams.style_weight * style_loss.item():12.2f}, tv loss={hparams.tv_weight * tv_loss.item():12.2f}')
                 utils.save_and_maybe_display(optimizing_img, cnt, hparams, should_display=False)
     elif hparams.optimizer == 'lbfgs':
         # line_search_fn does not seem to have significant impact on result
@@ -99,7 +106,7 @@ def neural_style_transfer(content_img_path, style_img_path, hparams):
             if total_loss.requires_grad:
                 total_loss.backward()
             with torch.no_grad():
-                print(f'L-BFGS | iteration: {cnt:03}, total loss={total_loss.item():12.4f}, content_loss={hparams.content_weight * content_loss.item():12.4f}, style loss={hparams.style_weight * style_loss.item():12.4f}, tv loss={hparams.tv_weight * tv_loss.item():12.4f}')
+                print(f'L-BFGS | iteration: {cnt:03}, total loss={total_loss.item():12.2f}, content_loss={hparams.content_weight * content_loss.item():12.2f}, style loss={hparams.style_weight * style_loss.item():12.2f}, tv loss={hparams.tv_weight * tv_loss.item():12.2f}')
                 utils.save_and_maybe_display(optimizing_img, cnt, hparams, should_display=False)
 
             cnt += 1

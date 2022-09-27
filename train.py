@@ -2,7 +2,6 @@ from datetime import datetime
 import glob
 import os
 
-import cv2
 import imageio
 import numpy as np
 import torch
@@ -11,6 +10,8 @@ from apex.optimizers import FusedAdam
 from einops import rearrange
 # models
 from kornia.utils.grid import create_meshgrid3d
+from gayts import neural_style_transfer
+from adain_inference import style_transfer_one_image
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
 from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
@@ -30,11 +31,13 @@ from datasets.ray_utils import axisangle_to_R, get_rays
 from losses import NeRFLoss
 from models.networks import NGP
 from models.rendering import MAX_SAMPLES, render
-from utils import depth2img, load_ckpt, slim_ckpt, parse_args
-from icecream import ic
+from utils import depth2img, load_ckpt, load_ngp_ckpt,slim_ckpt, parse_args, save_video
+from icecream import ic, install
+from tqdm import tqdm
 
+install()
 ic.configureOutput(prefix=lambda: datetime.now().strftime('%y-%m-%d %H:%M:%S | '),
-                   includeContext=False)
+                   includeContext=True)
 
 import warnings; warnings.filterwarnings("ignore")
 
@@ -58,9 +61,11 @@ class NeRFSystem(LightningModule):
 
         rgb_act = 'None' if self.hparams.use_exposure else 'Sigmoid'
         self.model = NGP(scale=self.hparams.scale, rgb_act=rgb_act)
+        # 注册两个buffer-- density_grid & grid_coords
         G = self.model.grid_size # 128
         self.model.register_buffer('density_grid', # multi-scale：cascades层，每层grid的大小为G**3
             torch.zeros(self.model.cascades, G**3))
+        # ic(self.model.density_grid)
         self.model.register_buffer('grid_coords', # (1, G, G, G, 3) -> (G**3, 3)
             create_meshgrid3d(G, G, G, False, dtype=torch.int32).reshape(-1, 3))
 
@@ -95,9 +100,17 @@ class NeRFSystem(LightningModule):
         """
         setup dataset for each machine
         """
-        dataset = dataset_dict[self.hparams.dataset_name]
-        kwargs = {'root_dir': self.hparams.root_dir,
-                  'downsample': self.hparams.downsample}
+        if hparams.loop < 1:
+            dataset = dataset_dict[self.hparams.dataset_name]
+            kwargs = {'root_dir': self.hparams.root_dir,
+                    'downsample': self.hparams.downsample}
+        else:
+            dataset = dataset_dict['stylized']
+            imgs_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/{self.hparams.loop-1}' # 上一轮渲染结果
+            kwargs = {'root_dir': self.hparams.root_dir,
+                    'imgs_dir': imgs_dir,
+                    'dataset_name': self.hparams.dataset_name,
+                    'downsample': self.hparams.downsample}
         self.train_dataset = dataset(split=self.hparams.split, **kwargs)
         self.train_dataset.batch_size = self.hparams.batch_size
         self.train_dataset.ray_sampling_strategy = self.hparams.ray_sampling_strategy
@@ -119,7 +132,15 @@ class NeRFSystem(LightningModule):
             self.register_parameter('dT',
                 nn.Parameter(torch.zeros(N, 3, device=self.device)))
 
-        load_ckpt(self.model, self.hparams.weight_path)
+        if hparams.loop > 0:
+            # ic("===============load_ngp_ckpt=============")
+            load_ngp_ckpt(self.model, hparams.ckpt_path_pre)
+        else:
+            load_ckpt(self.model, self.hparams.weight_path)
+        # ic(self.model.density_grid)
+        #! 固定density net
+        if hparams.loop > 0:
+            self.model.fix_xyz_encoder()
 
         net_params = []
         for n, p in self.named_parameters():
@@ -151,7 +172,9 @@ class NeRFSystem(LightningModule):
                           pin_memory=True)
 
     def on_train_start(self):
-        self.model.mark_invisible_cells(self.train_dataset.K.to(self.device),
+        if hparams.loop < 1:
+            #! 这个方法会重置density_grid, 要想训练一次后不再更新，则之后不用调用该方法
+            self.model.mark_invisible_cells(self.train_dataset.K.to(self.device),
                                         self.poses,
                                         self.train_dataset.img_wh)
 
@@ -161,11 +184,11 @@ class NeRFSystem(LightningModule):
         batch: dataloader的内容
         batch_idx: 索引
         """
-        if self.global_step%self.update_interval == 0:
+        #! 希望desity_grid在用原始图片训练一次后不再更新，以保留原始的3D空间信息
+        if self.global_step%self.update_interval == 0 and self.hparams.loop < 1:
             self.model.update_density_grid(0.01*MAX_SAMPLES/3**0.5,
                                            warmup=self.global_step<self.warmup_steps,
                                            erode=self.hparams.dataset_name=='colmap')
-
         results = self(batch, split='train')
         loss_d = self.loss(results, batch)
         if self.hparams.use_exposure:
@@ -263,6 +286,12 @@ class NeRFSystem(LightningModule):
 
 if __name__ == '__main__':
     hparams = parse_args()
+    # add ckpt_path_pre
+    version = '' if hparams.loop < 2 else f'-v{hparams.loop-1}'
+    hparams.ckpt_path_pre = f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/epoch={hparams.num_epochs-1}{version}.ckpt'
+    print('\033[32m#################################################\033[0m')
+    print(f'\033[32m##################LOOP {hparams.loop}#########################\033[0m')
+    print('\033[32m#################################################\033[0m')
     if hparams.val_only and (not hparams.ckpt_path):
         raise ValueError('You need to provide a @ckpt_path for validation!')
     
@@ -275,15 +304,16 @@ if __name__ == '__main__':
                               save_on_train_epoch_end=True,
                               save_top_k=-1)
     callbacks = [ckpt_cb, TQDMProgressBar(refresh_rate=1)]
-
-    logger = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}",
-                               name=hparams.exp_name,
-                               default_hp_metric=False)
-
-    # logger = WandbLogger(save_dir=f"logs/{hparams.dataset_name}",
-    #                      project="NeRF",
-    #                      name=hparams.exp_name,
-    #                      log_model=True)  # 最后保存一次模型
+    
+    if hparams.use_wandb:
+        logger = WandbLogger(save_dir=f"logs/{hparams.dataset_name}",
+                             project="NeRF",
+                             name=hparams.exp_name,
+                             log_model=True)  # 最后保存一次模型
+    else:
+        logger = TensorBoardLogger(save_dir=f"logs/{hparams.dataset_name}",
+                                name=hparams.exp_name,
+                                default_hp_metric=False)
 
     trainer = Trainer(max_epochs=hparams.num_epochs,
                       check_val_every_n_epoch=hparams.num_epochs,
@@ -298,6 +328,7 @@ if __name__ == '__main__':
                       precision=16)
 
     trainer.fit(system, ckpt_path=hparams.ckpt_path) # if ckpt_path is not none, resume training.
+    # ic(system.model.density_grid)
 
     if not hparams.val_only: # save slimmed ckpt for the last epoch
         ckpt_ = \
@@ -321,7 +352,17 @@ if __name__ == '__main__':
         exit()
     
     ret_dir = system.val_dir
-    ic(ret_dir)
     rgb_paths = [f"{ret_dir}/{name}" for name in os.listdir(ret_dir) if name.endswith('png') and 'd' not in name]
-    style_img = imageio.imread(hparams.style_image).astype(np.float32)/255.0   
- 
+    
+    # Stylized Image输出到相同目录下
+    hparams.out_dir = ret_dir
+    
+    print("开始风格迁移")
+    
+    for path in tqdm(rgb_paths):
+        hparams.content_image = path
+        # neural_style_transfer(path, hparams.style_image, hparams)       # gayts
+        style_transfer_one_image(path, hparams.style_image, hparams)    # adain
+    
+    # 保存一下NeRF渲染结果和单独风格化后结果的视频
+    save_video(hparams)

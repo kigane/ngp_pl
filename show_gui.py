@@ -1,5 +1,4 @@
 import torch
-from opt import get_opts
 import numpy as np
 from einops import rearrange
 import dearpygui.dearpygui as dpg
@@ -11,7 +10,7 @@ from datasets.ray_utils import get_ray_directions, get_rays
 from models.networks import NGP
 from models.rendering import render
 from train import depth2img
-from utils import load_ckpt
+from utils import load_ckpt, parse_args
 
 import warnings; warnings.filterwarnings("ignore")
 
@@ -183,7 +182,7 @@ class NGPGUI:
 
 
 if __name__ == "__main__":
-    hparams = get_opts()
+    hparams = parse_args()
     kwargs = {'root_dir': hparams.root_dir,
               'downsample': hparams.downsample,
               'read_meta': False}

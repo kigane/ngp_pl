@@ -33,6 +33,7 @@ class NGP(nn.Module):
         b = np.exp(np.log(2048*scale/N_min)/(L-1)) # N_max = 2048*scale
         print(f'GridEncoding: Nmin={N_min} b={b:.5f} F={F} T=2^{log2_T} L={L}')
 
+        # Encoding和Network合并版本，性能比分开更好。
         self.xyz_encoder = \
             tcnn.NetworkWithInputEncoding(
                 n_input_dims=3, n_output_dims=16,
@@ -54,6 +55,37 @@ class NGP(nn.Module):
                     "n_hidden_layers": 1,
                 }
             )
+        
+        # self.xyz_encoding = tcnn.Encoding(
+        #     n_input_dims=3,
+        #     encoding_config={
+        #         "otype": "Grid",
+        #         "type": "Hash",
+        #         "n_levels": L,
+        #         "n_features_per_level": F,
+        #         "log2_hashmap_size": log2_T,
+        #         "base_resolution": N_min,
+        #         "per_level_scale": b,
+        #         "interpolation": "Linear"
+        #     }
+        # )
+        
+        # self.xyz_network = tcnn.Network(
+        #     n_input_dims=self.xyz_encoding.n_output_dims, 
+        #     n_output_dims=16,
+        #     network_config={
+        #         "otype": "FullyFusedMLP",
+        #         "activation": "ReLU",
+        #         "output_activation": "None",
+        #         "n_neurons": 64,
+        #         "n_hidden_layers": 1,
+        #     }
+        # )
+        
+        # self.xyz_encoder = nn.Sequential(
+        #     self.xyz_encoding,
+        #     self.xyz_network
+        # )
 
         self.dir_encoder = \
             tcnn.Encoding(
@@ -102,7 +134,7 @@ class NGP(nn.Module):
         """
         x = (x-self.xyz_min)/(self.xyz_max-self.xyz_min)
         h = self.xyz_encoder(x)
-        # sigma = exp{x}
+        # sigma = exp{x} 取16维output的第一维
         sigmas = TruncExp.apply(h[:, 0]) 
         if return_feat: return sigmas, h
         return sigmas
@@ -270,3 +302,10 @@ class NGP(nn.Module):
         # 用一个bit标记8个顶点中大于threshold的。
         vren.packbits(self.density_grid, min(mean_density, density_threshold),
                       self.density_bitfield)
+    
+    def fix_xyz_encoder(self):
+        for params in self.xyz_encoder.parameters():
+            params.requires_grad = False
+        # 只固定编码器
+        # for params in self.xyz_encoder[0].parameters():
+        #     params.requires_grad = False

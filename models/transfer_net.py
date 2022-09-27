@@ -145,7 +145,8 @@ decoder = nn.Sequential(
 class VGGEncoder(nn.Module):
     def __init__(self, 
         ckpt_path, # 预训练权重位置
-        features=['relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'conv4_2', 'relu5_1'] # 要使用的特征层
+        # 要使用的特征层
+        features=['relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'conv4_2', 'relu5_1'] 
         ):
         super().__init__()
         self.features = features

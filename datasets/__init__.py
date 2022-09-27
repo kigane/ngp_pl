@@ -13,5 +13,5 @@ dataset_dict = {
     'nerfpp': NeRFPPDataset,
     'rtmv': RTMVDataset,
     'nerf_ret': NeRFRetDataset,
-    'stylied': StylizedDataest       
+    'stylized': StylizedDataest       
 }

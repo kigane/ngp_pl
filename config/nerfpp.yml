@@ -1,0 +1,44 @@
+#-------------------------------basic----------------------------------------
+
+num_gpus: 1             # number of gpus
+use_wandb: False        # use wandb or tensorboard
+
+#-------------------------------data-----------------------------------------
+
+root_dir: data/nerf++/tanks_and_temples/tanks_and_temples/tat_training_Truck               # root directory of dataset
+dataset_name: nerfpp              # [nerf | nsvf | colmap | nerfpp | rtmv] 
+split: train                      # [train | trainval| trainvaltest] 
+downsample: 0.5                   # downsample factor (<=1.0) for the images
+
+#-------------------------------model----------------------------------------
+
+scale: 16                        # scene scale (whole scene must lie in [-scale, scale]^3
+use_exposure: False               # whether to train in HDR-NeRF setting
+
+#-------------------------------training-------------------------------------
+
+distortion_loss_w: 0.0            # weight of distortion loss (see losses.py), 0 to disable (default), to enable, a good value is 1e-3 for real scene and 1e-2 for synthetic scene
+
+batch_size: 2048                  # number of rays in a batch
+ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
+num_epochs: 20                     # number of training epochs
+lr: 2.e-2                         # learning rate
+
+# experimental args
+optimize_ext: False               # whether to optimize extrinsics
+random_bg: False                  # whether to train with random bg color (real scene only) to avoid objects with black color to be predicted as transparent
+
+#-------------------------------validation-----------------------------------
+
+eval_lpips: True                 # evaluate lpips metric (consumes more VRAM)
+val_only: False                   # run only validation (need to provide ckpt_path)
+no_save_test: True               # whether to save test image and video
+
+#-------------------------------misc-----------------------------------------
+
+exp_name: NERFPP_TRUNK                     # experiment name
+# pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
+ckpt_path: null  
+# ckpt_path: ckpts/nsvf/TRUNK/epoch=19_slim.ckpt  # show_gui
+# pretrained checkpoint to load (excluding optimizers, etc)                 
+weight_path: null
