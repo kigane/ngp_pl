@@ -1,3 +1,4 @@
+import imghdr
 import torch
 import numpy as np
 import os
@@ -47,13 +48,21 @@ class ColmapDataset(BaseDataset):
     def read_meta(self, split, **kwargs):
         # Step 2: correct poses
         # read extrinsics (of successfully reconstructed images)
-        imdata = read_images_binary(os.path.join(self.root_dir, 'sparse/0/images.bin'))
-        img_names = [imdata[k].name for k in imdata]
-        perm = np.argsort(img_names)
         if '360_v2' in self.root_dir and self.downsample<1: # mipnerf360 data
             folder = f'images_{int(1/self.downsample)}'
         else:
             folder = 'images'
+        imdata = read_images_binary(os.path.join(self.root_dir, 'sparse/0/images.bin'))
+        
+        #! 处理元数据和images中实际存在的图片对不上的问题
+        img_names = [imdata[k].name for k in imdata]
+        exists_names = []
+        for name in img_names:
+            if os.path.exists(os.path.join(self.root_dir, folder, name)):
+                exists_names.append(name)
+        img_names = exists_names
+        
+        perm = np.argsort(img_names)
         # read successfully reconstructed images and ignore others
         img_paths = [os.path.join(self.root_dir, folder, name)
                      for name in sorted(img_names)]

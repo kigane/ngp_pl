@@ -2,7 +2,7 @@ content_image: data/colmap/zl/images/20220905182457.png
 style_image: data/styles/3.jpg
 height: 800
 init_method: content
-vgg_ckpt_path: data/pretrained/vgg_normalised.pth
+vgg_ckpt_path: data/pretrained/adain/vgg_normalised.pth
 optimizer: lbfgs # [lbfgs | adam]
 iterations: 1000 # [ 1000 | 3000] correspond to optimizer
 saving_freq: 100 # -1:only save final image

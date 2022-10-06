@@ -5,14 +5,15 @@ use_wandb: False        # use wandb or tensorboard
 
 #-------------------------------data-----------------------------------------
 
-root_dir: data/NSVF/TanksAndTemple/Truck               # root directory of dataset
-dataset_name: nsvf                # [nerf | nsvf | colmap | nerfpp | rtmv] 
+root_dir: data/nerf_llff_data/flower   # root directory of dataset
+# root_dir: data/NSVF/Synthetic_NSVF/Robot # nsvf 
+dataset_name: colmap                # [nerf | nsvf | colmap | nerfpp | rtmv] 
 split: train                      # [train | trainval| trainvaltest] 
-downsample: 0.5                   # downsample factor (<=1.0) for the images
+downsample: 0.2                   # downsample factor (<=1.0) for the images
 
 #-------------------------------model----------------------------------------
 
-scale: 0.5                        # scene scale (whole scene must lie in [-scale, scale]^3
+scale: 1.0                        # scene scale (whole scene must lie in [-scale, scale]^3
 use_exposure: False               # whether to train in HDR-NeRF setting
 
 #-------------------------------training-------------------------------------
@@ -21,8 +22,8 @@ distortion_loss_w: 0.0            # weight of distortion loss (see losses.py), 0
 
 batch_size: 8192                  # number of rays in a batch
 ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
-num_epochs: 20                     # number of training epochs
-lr: 2.e-2                         # learning rate
+num_epochs: 5                     # number of training epochs
+lr: 1.e-2                         # learning rate
 
 # experimental args
 optimize_ext: False               # whether to optimize extrinsics
@@ -30,15 +31,16 @@ random_bg: False                  # whether to train with random bg color (real 
 
 #-------------------------------validation-----------------------------------
 
-eval_lpips: True                 # evaluate lpips metric (consumes more VRAM)
+eval_lpips: False                 # evaluate lpips metric (consumes more VRAM)
 val_only: False                   # run only validation (need to provide ckpt_path)
-no_save_test: True               # whether to save test image and video
+no_save_test: False               # whether to save test image and video
 
 #-------------------------------misc-----------------------------------------
 
-exp_name: TRUNK                     # experiment name
+exp_name: LLFF_FLOWER                  # experiment name
 # pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
-# ckpt_path: null  
-ckpt_path: ckpts/nsvf/TRUNK/epoch=19_slim.ckpt  # show_gui
+ckpt_path: null
+# ckpt_path: ckpts/colmap/LLFF_WD/epoch=4_slim.ckpt  # show_gui
 # pretrained checkpoint to load (excluding optimizers, etc)                 
 weight_path: null
+fix_encoder: False

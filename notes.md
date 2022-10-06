@@ -36,3 +36,6 @@ model.grid_coords
 
 只固定density grid和Encoding，有一些floaters，且很模糊，效果不如双固定。
 
+use PAMA
+固定训练得到的NeRF几何形状更好，不固定训练时在测试位姿风格化结果更好，但只在测试位姿结果好，整体形状实际是很noisy的。
+

@@ -83,7 +83,7 @@ class NGPGUI:
                             'to_cpu': True, 'to_numpy': True,
                             'T_threshold': 1e-2,
                             'exposure': torch.cuda.FloatTensor([dpg.get_value('_exposure')]),
-                            'max_samples': 100,
+                            'max_samples': 200,
                             'exp_step_factor': exp_step_factor})
 
         rgb = rearrange(results["rgb"], "(h w) c -> h w c", h=self.H)

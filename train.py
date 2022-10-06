@@ -1,6 +1,7 @@
 from datetime import datetime
 import glob
 import os
+import shutil
 
 import imageio
 import numpy as np
@@ -10,8 +11,10 @@ from apex.optimizers import FusedAdam
 from einops import rearrange
 # models
 from kornia.utils.grid import create_meshgrid3d
+import yaml
 from gayts import neural_style_transfer
 from adain_inference import style_transfer_one_image
+from pama_inference import pama_infer_one_image
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
 from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
@@ -84,9 +87,7 @@ class NeRFSystem(LightningModule):
             dR = axisangle_to_R(self.dR[batch['img_idxs']])
             poses[..., :3] = dR @ poses[..., :3]
             poses[..., 3] += self.dT[batch['img_idxs']]
-
         rays_o, rays_d = get_rays(directions, poses)
-
         kwargs = {'test_time': split!='train',
                   'random_bg': self.hparams.random_bg}
         if self.hparams.scale > 0.5:
@@ -116,6 +117,9 @@ class NeRFSystem(LightningModule):
         self.train_dataset.ray_sampling_strategy = self.hparams.ray_sampling_strategy
 
         self.test_dataset = dataset(split='test', **kwargs)
+        #! 保存渲染图片的大小
+        self.image_wh = self.train_dataset.img_wh
+        # ic(self.image_wh)
 
     def configure_optimizers(self):
         """
@@ -133,13 +137,12 @@ class NeRFSystem(LightningModule):
                 nn.Parameter(torch.zeros(N, 3, device=self.device)))
 
         if hparams.loop > 0:
-            # ic("===============load_ngp_ckpt=============")
             load_ngp_ckpt(self.model, hparams.ckpt_path_pre)
         else:
             load_ckpt(self.model, self.hparams.weight_path)
-        # ic(self.model.density_grid)
+        
         #! 固定density net
-        if hparams.loop > 0:
+        if hparams.loop > 0 and hparams.fix_encoder:
             self.model.fix_xyz_encoder()
 
         net_params = []
@@ -172,7 +175,7 @@ class NeRFSystem(LightningModule):
                           pin_memory=True)
 
     def on_train_start(self):
-        if hparams.loop < 1:
+        if self.hparams.loop < 1 or not self.hparams.fix_encoder:
             #! 这个方法会重置density_grid, 要想训练一次后不再更新，则之后不用调用该方法
             self.model.mark_invisible_cells(self.train_dataset.K.to(self.device),
                                         self.poses,
@@ -185,7 +188,9 @@ class NeRFSystem(LightningModule):
         batch_idx: 索引
         """
         #! 希望desity_grid在用原始图片训练一次后不再更新，以保留原始的3D空间信息
-        if self.global_step%self.update_interval == 0 and self.hparams.loop < 1:
+        if  (not self.hparams.fix_encoder or\
+            self.hparams.loop < 1) and\
+            self.global_step%self.update_interval == 0:
             self.model.update_density_grid(0.01*MAX_SAMPLES/3**0.5,
                                            warmup=self.global_step<self.warmup_steps,
                                            erode=self.hparams.dataset_name=='colmap')
@@ -286,9 +291,20 @@ class NeRFSystem(LightningModule):
 
 if __name__ == '__main__':
     hparams = parse_args()
-    # add ckpt_path_pre
+
+    # 开始新的NeRF Style Transfer时，删除旧文件
+    if hparams.loop == 0:
+        ckpt_dir = f'ckpts/{hparams.dataset_name}/{hparams.exp_name}'
+        result_dir = f'results/{hparams.dataset_name}/{hparams.exp_name}'
+        if os.path.exists(ckpt_dir):
+            shutil.rmtree(ckpt_dir)
+        if os.path.exists(result_dir):
+            shutil.rmtree(result_dir)
+
+    # add ckpt_path_pre, used in SNeRF training
     version = '' if hparams.loop < 2 else f'-v{hparams.loop-1}'
     hparams.ckpt_path_pre = f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/epoch={hparams.num_epochs-1}{version}.ckpt'
+    
     print('\033[32m#################################################\033[0m')
     print(f'\033[32m##################LOOP {hparams.loop}#########################\033[0m')
     print('\033[32m#################################################\033[0m')
@@ -351,18 +367,31 @@ if __name__ == '__main__':
     if hparams.loop == -1:
         exit()
     
-    ret_dir = system.val_dir
-    rgb_paths = [f"{ret_dir}/{name}" for name in os.listdir(ret_dir) if name.endswith('png') and 'd' not in name]
+    result_dir = system.val_dir
+    # 渲染图路径
+    rgb_paths = [f"{result_dir}/{name}" for name in os.listdir(result_dir) if name.endswith('png') and 'd' not in name]
     
     # Stylized Image输出到相同目录下
-    hparams.out_dir = ret_dir
+    hparams.out_dir = result_dir
+    hparams.image_wh = system.image_wh
+    # 保存超参数
+    with open(os.path.join(os.path.dirname(result_dir), 'config.yml'), 'w') as f:
+        yaml.safe_dump(hparams.__dict__, f)
     
     print("开始风格迁移")
     
+    if hparams.style_transfer_method == 'gayts':
+        style_transfer = neural_style_transfer
+    elif hparams.style_transfer_method == 'adain':
+        style_transfer = style_transfer_one_image
+    elif hparams.style_transfer_method == 'pama':
+        style_transfer = pama_infer_one_image
+    else:
+        raise NotImplementedError(f"{hparams.style_transfer_method} is not supported")
+    
     for path in tqdm(rgb_paths):
-        hparams.content_image = path
-        # neural_style_transfer(path, hparams.style_image, hparams)       # gayts
-        style_transfer_one_image(path, hparams.style_image, hparams)    # adain
+        hparams.content_image = path #? 我为什么要写这一行
+        style_transfer(path, hparams.style_image, hparams)
     
     # 保存一下NeRF渲染结果和单独风格化后结果的视频
     save_video(hparams)

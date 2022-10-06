@@ -1,7 +1,7 @@
 content_dir: results/nerf/LEGO/0
 style_image: data/styles/3.jpg
-vgg: data/pretrained/vgg_normalised.pth
-decoder: data/pretrained/decoder.pth
+vgg: data/pretrained/adain/vgg_normalised.pth
+decoder: data/pretrained/adain/decoder.pth
 content_size: 800
 style_size: 800
 crop: False
