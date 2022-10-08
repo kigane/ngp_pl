@@ -28,6 +28,8 @@ lr: 1.e-2                         # learning rate
 # experimental args
 optimize_ext: False               # whether to optimize extrinsics
 random_bg: False                  # whether to train with random bg color (real scene only) to avoid objects with black color to be predicted as transparent
+use_l1_loss: False
+use_depth_loss: False
 
 #-------------------------------validation-----------------------------------
 
@@ -37,10 +39,10 @@ no_save_test: False               # whether to save test image and video
 
 #-------------------------------misc-----------------------------------------
 
-exp_name: LLFF_FLOWER_ST_FIX                  # experiment name
+exp_name: LLFF_FLOWER_ST_ADAIN                  # experiment name
 # pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
-# ckpt_path: null
-ckpt_path: ckpts/colmap/LLFF_FLOWER_ST_FIX/epoch=4-v3.ckpt  # show_gui
+ckpt_path: null
+# ckpt_path: ckpts/colmap/LLFF_FLOWER_ST_DLOSS/epoch=4-v4.ckpt  # show_gui
 # pretrained checkpoint to load (excluding optimizers, etc)                 
 weight_path: null
 fps: 5 # result video fps
@@ -52,8 +54,8 @@ fps: 5 # result video fps
 
 #-------------------------------style transfer-------------------------------
 
-style_transfer_method: pama # [gayts(too slow) | adain | pama]
-fix_encoder: True
+style_transfer_method: adain # [gayts(too slow) | adain | pama]
+fix_encoder: False
 
 style_image: data/styles/14.jpg
 vgg_pretrained: data/pretrained/adain/vgg_normalised.pth
@@ -67,8 +69,12 @@ pretrained: True
 requires_grad: False
 
 # adain
-content_size: 800
-style_size: 800
+content_size: 
+  - 600
+  - 800
+style_size:
+  - 600
+  - 800
 crop: False
 alpha: 1.0 # more content [0 ------> 1] more style
 

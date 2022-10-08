@@ -38,7 +38,8 @@ no_save_test: True               # whether to save test image and video
 
 exp_name: TRUNK                     # experiment name
 # pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
-# ckpt_path: null  
-ckpt_path: ckpts/nsvf/TRUNK/epoch=19_slim.ckpt  # show_gui
+ckpt_path: null  
+# ckpt_path: ckpts/nsvf/TRUNK/epoch=19_slim.ckpt  # show_gui
 # pretrained checkpoint to load (excluding optimizers, etc)                 
 weight_path: null
+fix_encoder: False

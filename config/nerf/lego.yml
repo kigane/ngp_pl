@@ -8,7 +8,7 @@ use_wandb: False        # use wandb or tensorboard
 root_dir: data/lego               # root directory of dataset
 dataset_name: nerf                # [nerf | nsvf | colmap | nerfpp | rtmv] 
 split: train                      # [train | trainval| trainvaltest] 
-downsample: 1.0                   # downsample factor (<=1.0) for the images
+downsample: 0.5                   # downsample factor (<=1.0) for the images
 
 #-------------------------------model----------------------------------------
 
@@ -19,7 +19,7 @@ use_exposure: False               # whether to train in HDR-NeRF setting
 
 distortion_loss_w: 0.0            # weight of distortion loss (see losses.py), 0 to disable (default), to enable, a good value is 1e-3 for real scene and 1e-2 for synthetic scene
 
-batch_size: 8192                  # number of rays in a batch
+batch_size: 512                  # number of rays in a batch
 ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
 num_epochs: 5                     # number of training epochs
 lr: 1.e-2                         # learning rate
@@ -36,65 +36,15 @@ no_save_test: False               # whether to save test image and video
 
 #-------------------------------misc-----------------------------------------
 
-exp_name: LEGO_DLOSS                 # experiment name
+exp_name: LEGO_CUSTOM                 # experiment name
 # pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
 ckpt_path: null
 # ckpt_path: ckpts/colmap/LLFF_FLOWER_ST_FIX/epoch=4-v3.ckpt  # show_gui
 # pretrained checkpoint to load (excluding optimizers, etc)                 
 weight_path: null
-fps: 10 # result video fps
+fix_encoder: False
 
 # checkpoints: 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
 # logs: 'logs/dataset_name/exp_name/'
 # results: 'results/dataset_name/exp_name/xxx.png|xxx_d.png'
 # results: 'results/dataset_name/exp_name/#loop/xxx.png|xxx_d.png'
-
-#-------------------------------style transfer-------------------------------
-
-style_transfer_method: pama # [gayts(too slow) | adain | pama]
-fix_encoder: True
-
-style_image: data/styles/14.jpg
-vgg_pretrained: data/pretrained/adain/vgg_normalised.pth
-decoder_pretrained: data/pretrained/adain/decoder.pth
-save_ext: .jpg
-
-# pama
-checkpoints: data/pretrained/pama/original
-training: False # control PAMANet forward path
-pretrained: True
-requires_grad: False
-
-# adain
-content_size: 800
-style_size: 800
-crop: False
-alpha: 1.0 # more content [0 ------> 1] more style
-
-# gayts
-# height: 800
-# init_method: content
-# vgg_ckpt_path: data/pretrained/vgg_normalised.pth #FIXME repeat
-# optimizer: adam # [lbfgs | adam]
-# iterations: 3000 # [ 1000 | 3000] correspond to optimizer
-# saving_freq: -1 # -1:only save final image
-
-# lr_st: 0.01
-# content_weight: 10
-# style_weight: 1
-# tv_weight: 0.001
-
-# features: 
-#   - relu1_1
-#   - relu2_1
-#   - relu3_1
-#   - relu4_1
-#   - conv4_2
-#   - relu5_1
-# content_feature_index: 4
-# style_features_indices: 
-#   - 0
-#   - 1
-#   - 2
-#   - 3
-#   - 5

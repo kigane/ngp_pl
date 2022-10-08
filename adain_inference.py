@@ -17,7 +17,7 @@ ic.configureOutput(prefix=lambda: datetime.now().strftime('%y-%m-%d %H:%M:%S | '
 
 def test_transform(size, crop):
     transform_list = []
-    if size != 0:
+    if size:
         transform_list.append(transforms.Resize(size))
     if crop:
         transform_list.append(transforms.CenterCrop(size))
