@@ -10,34 +10,7 @@ import json
 from .base import BaseDataset
 from .ray_utils import *
 from .color_utils import read_image
-from .colmap_utils import \
-    read_cameras_binary, read_images_binary, read_points3d_binary
-
-
-class SimpleDataset(Dataset):
-    def __init__(self, dir) -> None:
-        super().__init__()
-        self.img_paths = os.listdir(dir)
-    
-    def __len__(self):
-        return len(self.img_paths)
-    
-    def __getitem__(self, index):
-        img = imageio.imread(self.img_paths[index]).astype(np.float32)/255.0
-        return torch.FloatTensor(img)
-
-
-class NeRFRetDataset(Dataset):
-    def __init__(self, ret_dir) -> None:
-        super().__init__()
-        self.rgb_img_paths = [f"{ret_dir}/{name}" for name in os.listdir(ret_dir) if name.endswith('png') and 'd' not in name]
-    
-    def __len__(self):
-        return len(self.rgb_img_paths)
-    
-    def __getitem__(self, index):
-        img = imageio.imread(self.rgb_img_paths[index]).astype(np.float32)/255.0
-        return torch.FloatTensor(img)
+from .colmap_utils import read_cameras_binary
 
 
 class StylizedDataest(BaseDataset):
@@ -93,26 +66,56 @@ class StylizedDataest(BaseDataset):
 
     def read_meta(self, split, **kwargs):
         img_paths = [os.path.join(self.imgs_dir, name) for name in sorted(os.listdir(os.path.join(self.imgs_dir))) if '_s_' in name]
+        # 添加相应深度图
         poses = np.load(os.path.join(self.imgs_dir, 'poses.npy'))
+        depths = np.load(os.path.join(os.path.dirname(self.imgs_dir), 'depths.npy'))
         
         self.rays = []
+        self.depths = []
         # use every 8th image as test set
-        if split=='train':
-            img_paths = [x for i, x in enumerate(img_paths) if i%8!=0]
-            self.poses = np.array([x for i, x in enumerate(poses) if i%8!=0])
-        elif split=='test': #! 迭代时所有的poses都渲染出来
-            img_paths = img_paths
-            self.poses = poses
+        # if split=='train':
+        #     self.poses = poses
+        #     # img_paths = [x for i, x in enumerate(img_paths) if i%8!=0]
+        #     # self.poses = np.array([x for i, x in enumerate(poses) if i%8!=0])
+        # elif split=='test': #! 迭代时所有的poses都渲染出来
+        #     img_paths = img_paths
+        #     self.poses = poses
         
         print(f'Loading {len(img_paths)} {split} images ...')
         for img_path in tqdm(img_paths):
             img = read_image(img_path, self.img_wh, blend_a=False)
             img = torch.FloatTensor(img)
             self.rays += [img]
-            
+        
         self.rays = torch.stack(self.rays) # (N_images, hw, ?)
-        self.poses = torch.FloatTensor(self.poses) # (N_images, 3, 4)
+        self.depths = depths # (N_images, hw) results['depth']结果就是这个形状
+        self.poses = torch.FloatTensor(poses) # (N_images, 3, 4)
 
+    def __getitem__(self, idx):
+        if self.split.startswith('train'):
+            # training pose is retrieved in train.py
+            if self.ray_sampling_strategy == 'all_images': # randomly select images
+                img_idxs = np.random.choice(len(self.poses), self.batch_size)
+            elif self.ray_sampling_strategy == 'same_image': # randomly select ONE image
+                img_idxs = np.random.choice(len(self.poses), 1)[0]
+            # randomly select pixels
+            pix_idxs = np.random.choice(self.img_wh[0]*self.img_wh[1], self.batch_size)
+            rays = self.rays[img_idxs, pix_idxs]
+            depths = self.depths[img_idxs, pix_idxs]
+            sample = {'img_idxs': img_idxs, 'pix_idxs': pix_idxs,
+                      'depth': depths,
+                      'rgb': rays[:, :3]}
+            if self.rays.shape[-1] == 4: # HDR-NeRF data
+                sample['exposure'] = rays[:, 3:]
+        else:
+            sample = {'pose': self.poses[idx], 'img_idxs': idx}
+            if len(self.rays)>0: # if ground truth available
+                rays = self.rays[idx]
+                sample['rgb'] = rays[:, :3]
+                if rays.shape[1] == 4: # HDR-NeRF data
+                    sample['exposure'] = rays[0, 3] # same exposure for all rays
+
+        return sample
         
 
 if __name__ == '__main__':

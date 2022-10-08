@@ -128,7 +128,10 @@ class ColmapDataset(BaseDataset):
             if split=='train':
                 img_paths = [x for i, x in enumerate(img_paths) if i%8!=0]
                 self.poses = np.array([x for i, x in enumerate(self.poses) if i%8!=0])
-            elif split=='test':
+            elif kwargs.get('st', False): #! 风格迁移时所有训练图片都拿来训练
+                ic("pass")
+                pass
+            elif split=='test': 
                 img_paths = [x for i, x in enumerate(img_paths) if i%8==0]
                 self.poses = np.array([x for i, x in enumerate(self.poses) if i%8==0])
 

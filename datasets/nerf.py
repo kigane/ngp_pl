@@ -17,7 +17,7 @@ class NeRFDataset(BaseDataset):
         self.read_intrinsics()
 
         if kwargs.get('read_meta', True):
-            self.read_meta(split)
+            self.read_meta(split, **kwargs)
 
     def read_intrinsics(self):
         with open(os.path.join(self.root_dir, "transforms_train.json"), 'r') as f:
@@ -34,9 +34,12 @@ class NeRFDataset(BaseDataset):
         self.directions = get_ray_directions(h, w, self.K)
         self.img_wh = (w, h)
 
-    def read_meta(self, split):
+    def read_meta(self, split, **kwargs):
         self.rays = []
         self.poses = []
+        
+        if kwargs.get('st', False) and split=='test':
+            split = 'trainval'
 
         if split == 'trainval':
             with open(os.path.join(self.root_dir, "transforms_train.json"), 'r') as f:

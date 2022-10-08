@@ -16,6 +16,53 @@ import PIL.Image as Image
 from torchvision import transforms
 from constants import IMAGENET_MEAN_255, IMAGENET_STD_NEUTRAL
 
+import logging
+import sys
+
+loggers = {}
+
+LOG_ENABLED = True  # 是否开启日志
+LOG_TO_CONSOLE = False  # 是否输出到控制台
+LOG_TO_FILE = True  # 是否输出到文件
+
+LOG_LEVEL = 'DEBUG'  # 日志级别
+LOG_FORMAT = '[%(levelname)s][%(asctime)s][process: %(process)d][%(filename)s:%(lineno)d]: %(message)s'  # 每条日志输出格式
+
+def get_logger(name=None, log_path='./record.log'):
+    """
+    get logger by name
+    :param name: name of logger
+    :return: logger
+    """
+    global loggers
+
+    if not name: name = __name__
+
+    if loggers.get(name):
+        return loggers.get(name)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(LOG_LEVEL)
+
+    # 输出到控制台
+    if LOG_ENABLED and LOG_TO_CONSOLE:
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setLevel(level=LOG_LEVEL)
+        formatter = logging.Formatter(LOG_FORMAT)
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+
+    # 输出到文件
+    if LOG_ENABLED and LOG_TO_FILE:
+        file_handler = logging.FileHandler(log_path, encoding='utf-8')
+        file_handler.setLevel(level=LOG_LEVEL)
+        formatter = logging.Formatter(LOG_FORMAT)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    # 保存到全局 loggers
+    loggers[name] = logger
+    return logger
 
 #------------------------------args------------------------------------------
 

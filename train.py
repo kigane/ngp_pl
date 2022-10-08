@@ -31,10 +31,10 @@ from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
 from datasets import dataset_dict
 from datasets.ray_utils import axisangle_to_R, get_rays
-from losses import NeRFLoss
+from losses import NeRFL1Loss, NeRFLoss
 from models.networks import NGP
 from models.rendering import MAX_SAMPLES, render
-from utils import depth2img, load_ckpt, load_ngp_ckpt,slim_ckpt, parse_args, save_video
+from utils import depth2img, load_ckpt, load_ngp_ckpt,slim_ckpt, parse_args, save_video, get_logger
 from icecream import ic, install
 from tqdm import tqdm
 
@@ -52,8 +52,12 @@ class NeRFSystem(LightningModule):
 
         self.warmup_steps = 256
         self.update_interval = 16
-
-        self.loss = NeRFLoss(lambda_distortion=self.hparams.distortion_loss_w)
+        if hparams.use_l1_loss:
+            flogger.debug("use NeRFL1Loss")
+            self.loss = NeRFL1Loss(lambda_distortion=self.hparams.distortion_loss_w)
+        else:
+            flogger.debug("use NeRFLoss(mse)")
+            self.loss = NeRFLoss(lambda_distortion=self.hparams.distortion_loss_w)
         self.train_psnr = PeakSignalNoiseRatio(data_range=1)
         self.val_psnr = PeakSignalNoiseRatio(data_range=1)
         self.val_ssim = StructuralSimilarityIndexMeasure(data_range=1)
@@ -104,14 +108,16 @@ class NeRFSystem(LightningModule):
         if hparams.loop < 1:
             dataset = dataset_dict[self.hparams.dataset_name]
             kwargs = {'root_dir': self.hparams.root_dir,
-                    'downsample': self.hparams.downsample}
+                    'downsample': self.hparams.downsample,
+                    'st': hparams.loop > -1}
         else:
             dataset = dataset_dict['stylized']
             imgs_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/{self.hparams.loop-1}' # 上一轮渲染结果
             kwargs = {'root_dir': self.hparams.root_dir,
                     'imgs_dir': imgs_dir,
                     'dataset_name': self.hparams.dataset_name,
-                    'downsample': self.hparams.downsample}
+                    'downsample': self.hparams.downsample,
+                    'st': hparams.loop > -1}
         self.train_dataset = dataset(split=self.hparams.split, **kwargs)
         self.train_dataset.batch_size = self.hparams.batch_size
         self.train_dataset.ray_sampling_strategy = self.hparams.ray_sampling_strategy
@@ -195,7 +201,8 @@ class NeRFSystem(LightningModule):
                                            warmup=self.global_step<self.warmup_steps,
                                            erode=self.hparams.dataset_name=='colmap')
         results = self(batch, split='train')
-        loss_d = self.loss(results, batch)
+        loss_d = self.loss(results, batch, 
+                           use_depth_loss=self.hparams.use_depth_loss)
         if self.hparams.use_exposure:
             zero_radiance = torch.zeros(1, 3, device=self.device)
             unit_exposure_rgb = self.model.log_radiance_to_rgb(zero_radiance,
@@ -203,7 +210,9 @@ class NeRFSystem(LightningModule):
             loss_d['unit_exposure'] = \
                 0.5*(unit_exposure_rgb-self.train_dataset.unit_exposure_rgb)**2
         loss = sum(lo.mean() for lo in loss_d.values())
-
+        loss_dict = {k:lo.detach().cpu().mean() for k, lo in loss_d.items()}
+        flogger.debug(f"loss depth: {loss_dict.get('depth', 0)}")
+        
         with torch.no_grad():
             self.train_psnr(results['rgb'], batch['rgb'])
         self.log('lr', self.net_opt.param_groups[0]['lr'])
@@ -258,7 +267,10 @@ class NeRFSystem(LightningModule):
             imageio.imsave(os.path.join(self.val_dir, f'{idx:03d}_d.png'), depth)
             if self.hparams.loop > -1:
                 logs['pose'] = pose.cpu().numpy()
-
+            # 保留原NeRF的深度图作为GT
+            if self.hparams.loop == 0:
+                logs['depth'] = results['depth'].cpu().numpy()
+                
         return logs
 
     def validation_epoch_end(self, outputs):
@@ -281,6 +293,10 @@ class NeRFSystem(LightningModule):
         if self.hparams.loop > -1:
             img_pose = np.stack([x['pose'] for x in outputs], axis=0)
             np.save(f'{self.val_dir}/poses.npy', img_pose)
+        
+        if self.hparams.loop == 0:
+            img_depths = np.stack([x['depth'] for x in outputs], axis=0)
+            np.save(f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/depths.npy', img_depths)
 
     def get_progress_bar_dict(self):
         # don't show the version number
@@ -291,6 +307,7 @@ class NeRFSystem(LightningModule):
 
 if __name__ == '__main__':
     hparams = parse_args()
+    flogger = get_logger()
 
     # 开始新的NeRF Style Transfer时，删除旧文件
     if hparams.loop == 0:
@@ -374,6 +391,8 @@ if __name__ == '__main__':
     # Stylized Image输出到相同目录下
     hparams.out_dir = result_dir
     hparams.image_wh = system.image_wh
+    flogger.info(f"out_dir={hparams.out_dir}")
+    flogger.info(f"image_wh={hparams.image_wh}")
     # 保存超参数
     with open(os.path.join(os.path.dirname(result_dir), 'config.yml'), 'w') as f:
         yaml.safe_dump(hparams.__dict__, f)
