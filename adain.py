@@ -3,7 +3,6 @@ import numpy as np
 import torch
 from tqdm import tqdm
 # optimizer, losses
-from apex.optimizers import FusedAdam
 # models
 from pytorch_lightning import LightningModule
 # pytorch-lightning

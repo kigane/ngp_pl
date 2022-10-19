@@ -1,0 +1,7 @@
+content_dir: results/nerf/LEGO/0
+style_dir: data/styles/3.jpg
+vgg_pretrained: data/pretrained/adain/vgg_normalised.pth
+lr: 1.e-4
+content_weight: 1
+style_weight: 10
+
