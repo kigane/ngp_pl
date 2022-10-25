@@ -54,7 +54,7 @@ class NGPGUI:
     def __init__(self, hparams, K, img_wh, radius=2.5):
         self.hparams = hparams
         rgb_act = 'None' if self.hparams.use_exposure else 'Sigmoid'
-        self.model = NGP(scale=hparams.scale, rgb_act=rgb_act).cuda()
+        self.model = NGP(scale=hparams.scale, rgb_act=rgb_act, hparams=self.hparams).cuda()
         load_ckpt(self.model, hparams.ckpt_path)
 
         self.cam = OrbitCamera(K, img_wh, r=radius)

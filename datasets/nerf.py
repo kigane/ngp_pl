@@ -37,9 +37,6 @@ class NeRFDataset(BaseDataset):
     def read_meta(self, split, **kwargs):
         self.rays = []
         self.poses = []
-        
-        if kwargs.get('st', False) and split=='test':
-            split = 'trainval'
 
         if split == 'trainval':
             with open(os.path.join(self.root_dir, "transforms_train.json"), 'r') as f:

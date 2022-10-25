@@ -21,7 +21,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torchvision import transforms as tf
 
-import models.transfer_net as net
+import models.adain_net as net
 from datasets.style_transfer_dataset import SimpleDataset
 from models.johnson_net import TransformerNet
 from utils import parse_args

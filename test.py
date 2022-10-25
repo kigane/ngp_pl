@@ -1,7 +1,7 @@
 from datetime import datetime
 from glob import glob
 from icecream import ic, install
-import models.transfer_net as tnet
+import models.adain_net as tnet
 import torch
 import torch.nn as nn
 import os
@@ -36,7 +36,7 @@ def save_video(name, img_paths):
     
 
 if __name__ == '__main__':
-    hparams = utils.parse_args()
+    # hparams = utils.parse_args()
     # ic(tnet.vgg)
     # ic(tnet.vgg_layers_name_index_map)
     
@@ -44,8 +44,10 @@ if __name__ == '__main__':
     # test_encoder(model)
     
     # show_ckpt()
-    hparams.loop = 1
-    utils.save_video(hparams)
+    # ic(hparams)
+    
+    # hparams.loop = 1
+    # utils.save_video(hparams)
     
     # img_dir = 'results/nerf/LEGO_ST/0'
     # video_name = 'v.mp4'
@@ -57,4 +59,13 @@ if __name__ == '__main__':
     # ic(img.size)
     
     print('\033[32m#################################################\033[0m')
+    ckpt_dict = torch.load("ckpts/depth_adain/epoch=4.ckpt")
+    ic(ckpt_dict.keys())
+    keys_to_pop = []
+    for k in ckpt_dict['state_dict']:
+        if k.startswith('midas'):
+            keys_to_pop += [k]
+    for k in keys_to_pop:
+        ckpt_dict['state_dict'].pop(k, None)
+    ic(ckpt_dict['state_dict'].keys())
     

@@ -1,0 +1,19 @@
+content_dir: data/frames # path to video frames
+style_path: data/styles/14.jpg # the style source
+testing_mode: art # Artistic or Photo-realistic                    
+vgg: data/pretrained/ccpl/vgg_normalised.pth
+decoder: data/pretrained/ccpl/decoder_iter_160000.pth.tar # decoder to load
+SCT: data/pretrained/ccpl/sct_iter_160000.pth.tar # SCT module to load
+content_size: 
+  - 600
+  - 800
+style_size:
+  - 600
+  - 800
+crop: False # do center crop to create squared image
+save_ext: .mp4 # The extension name of the output video
+output: results # output dir
+
+# Advanced options
+preserve_color: False # If specified, preserve color of the content image')
+alpha: 1.0 # The weight that controls the degree of stylization. Should be between 0 and 1')

@@ -1,7 +1,21 @@
-content_dir: results/nerf/LEGO/0
-style_dir: data/styles/3.jpg
+use_wandb: False
+num_gpus: 1
+num_epochs: 1
+batch_size: 4
+exp_name: DEPTH_ST_ADAIN
+
+content_dir: data/coco/train2017
+style_dir: data/wikiart/train
 vgg_pretrained: data/pretrained/adain/vgg_normalised.pth
+decoder: data/pretrained/adain/decoder.pth
+# image_size 大小有限制，必须是16的倍数400,600会报错
+image_size: 512 # 小边设为800，大边按宽高比缩放，再CenterCrop取中间的800x800区域
+crop_size: 256 # 小边设为800，大边按宽高比缩放，再CenterCrop取中间的800x800区域
 lr: 1.e-4
 content_weight: 1
 style_weight: 10
+depth_weight: 10
+
+ckpt_path: null
+# ckpt_path: ckpts/depth_adain/epoch=0.ckpt
 

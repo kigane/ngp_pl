@@ -6,17 +6,17 @@ use_wandb: False        # use wandb or tensorboard
 #-------------------------------data-----------------------------------------
 
 # root_dir: data/lego               # root directory of dataset
-root_dir: data/nerf++/lf_data/lf_data/africa # nsvf 
-exp_name: LLFF_AFRICA                  # experiment name
+root_dir: data/nerf_llff_data/fern  # [fern, leaves, flower, orchid, trex]
+exp_name: LLFF_TREX                  # experiment name
 ckpt_path: null
-# ckpt_path: ckpts/nerfpp/LLFF_AFRICA/epoch=4-v1.ckpt  # show_gui
-dataset_name: nerfpp                # [nerf | nsvf | colmap | nerfpp | rtmv] 
-split: train                      # [train | trainval| trainvaltest] 
-downsample: 0.1985                 # downsample factor (<=1.0) for the images
+# ckpt_path: ckpts/colmap/LLFF_TREX/epoch=4-slim.ckpt  # show_gui
+dataset_name: colmap                # [nerf | nsvf | colmap | nerfpp | rtmv] 
+split: train                        # [train | trainval| trainvaltest] 
+downsample: 0.1985                  # downsample factor (<=1.0) for the images
 
 #-------------------------------model----------------------------------------
 
-scale: 2.0                        # scene scale (whole scene must lie in [-scale, scale]^3
+scale: 4.0                        # scene scale (whole scene must lie in [-scale, scale]^3
 use_exposure: False               # whether to train in HDR-NeRF setting
 L: 16 # 多尺度特征层数。原始值: 16 
 F: 4  # 每层特征维度。原始值: 2 

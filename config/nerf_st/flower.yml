@@ -1,107 +1,27 @@
-#-------------------------------basic----------------------------------------
+#-------------------------------data & model----------------------------------
 
-num_gpus: 1             # number of gpus
-use_wandb: False        # use wandb or tensorboard
-
-#-------------------------------data-----------------------------------------
-
-# root_dir: data/lego               # root directory of dataset
-root_dir: data/nerf_llff_data/flower # nsvf 
+root_dir: data/nerf_llff_data/flower # root directory of dataset
+exp_name: LLFF_FLOWER_ST_PAMA_17     # experiment name
+ckpt_path: null
+# ckpt_path: ckpts/colmap/LLFF_FLOWER_ST_GAYTS/epoch=0-v4.ckpt  # show_gui
+weight_path: null
 dataset_name: colmap                # [nerf | nsvf | colmap | nerfpp | rtmv] 
 split: train                      # [train | trainval| trainvaltest] 
 downsample: 0.1985                   # downsample factor (<=1.0) for the images
-
-#-------------------------------model----------------------------------------
-
 scale: 1.0                        # scene scale (whole scene must lie in [-scale, scale]^3
-use_exposure: False               # whether to train in HDR-NeRF setting
+L: 16 # 多尺度特征层数。原始值: 16 
+F: 2  # 每层特征维度。原始值: 2 
+log2_T: 19 # 哈希表大小。原始值: 19 
+N_min: 16 #　最低分辨率。原始值: 16 
 
 #-------------------------------training-------------------------------------
-
-distortion_loss_w: 0.0            # weight of distortion loss (see losses.py), 0 to disable (default), to enable, a good value is 1e-3 for real scene and 1e-2 for synthetic scene
 
 batch_size: 8192                  # number of rays in a batch
 ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
 num_epochs: 5                     # number of training epochs
 lr: 1.e-2                         # learning rate
 
-# experimental args
-optimize_ext: False               # whether to optimize extrinsics
-random_bg: False                  # whether to train with random bg color (real scene only) to avoid objects with black color to be predicted as transparent
-use_l1_loss: False
-use_depth_loss: False
-
-#-------------------------------validation-----------------------------------
-
-eval_lpips: False                 # evaluate lpips metric (consumes more VRAM)
-val_only: False                   # run only validation (need to provide ckpt_path)
-no_save_test: False               # whether to save test image and video
-
-#-------------------------------misc-----------------------------------------
-
-exp_name: LLFF_FLOWER_ST_ADAIN                  # experiment name
-# pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
-ckpt_path: null
-# ckpt_path: ckpts/colmap/LLFF_FLOWER_ST_DLOSS/epoch=4-v4.ckpt  # show_gui
-# pretrained checkpoint to load (excluding optimizers, etc)                 
-weight_path: null
-fps: 5 # result video fps
-
-# checkpoints: 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
-# logs: 'logs/dataset_name/exp_name/'
-# results: 'results/dataset_name/exp_name/xxx.png|xxx_d.png'
-# results: 'results/dataset_name/exp_name/#loop/xxx.png|xxx_d.png'
-
 #-------------------------------style transfer-------------------------------
 
-style_transfer_method: adain # [gayts(too slow) | adain | pama]
-fix_encoder: False
-
-style_image: data/styles/14.jpg
-vgg_pretrained: data/pretrained/adain/vgg_normalised.pth
-decoder_pretrained: data/pretrained/adain/decoder.pth
-save_ext: .jpg
-
-# pama
-checkpoints: data/pretrained/pama/original
-training: False # control PAMANet forward path
-pretrained: True
-requires_grad: False
-
-# adain
-content_size: 
-  - 600
-  - 800
-style_size:
-  - 600
-  - 800
-crop: False
-alpha: 1.0 # more content [0 ------> 1] more style
-
-# gayts
-# height: 800
-# init_method: content
-# vgg_ckpt_path: data/pretrained/vgg_normalised.pth #FIXME repeat
-# optimizer: adam # [lbfgs | adam]
-# iterations: 3000 # [ 1000 | 3000] correspond to optimizer
-# saving_freq: -1 # -1:only save final image
-
-# lr_st: 0.01
-# content_weight: 10
-# style_weight: 1
-# tv_weight: 0.001
-
-# features: 
-#   - relu1_1
-#   - relu2_1
-#   - relu3_1
-#   - relu4_1
-#   - conv4_2
-#   - relu5_1
-# content_feature_index: 4
-# style_features_indices: 
-#   - 0
-#   - 1
-#   - 2
-#   - 3
-#   - 5
+style_transfer_method: pama # [gayts(too slow) | adain | pama | ccpl]
+style_image: data/styles/17.jpg

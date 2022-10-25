@@ -5,11 +5,11 @@ use_wandb: False        # use wandb or tensorboard
 
 #-------------------------------data-----------------------------------------
 
-root_dir: data/nerf_llff_data/flower   # root directory of dataset
+root_dir: data/nerf++/lf_data/lf_data/statue   # root directory of dataset
 # root_dir: data/NSVF/Synthetic_NSVF/Robot # nsvf 
-dataset_name: colmap                # [nerf | nsvf | colmap | nerfpp | rtmv] 
+dataset_name: nerfpp                # [nerf | nsvf | colmap | nerfpp | rtmv] 
 split: train                      # [train | trainval| trainvaltest] 
-downsample: 0.2                   # downsample factor (<=1.0) for the images
+downsample: 1.0                   # downsample factor (<=1.0) for the images
 
 #-------------------------------model----------------------------------------
 
@@ -37,10 +37,12 @@ no_save_test: False               # whether to save test image and video
 
 #-------------------------------misc-----------------------------------------
 
-exp_name: LLFF_FLOWER                  # experiment name
+exp_name: LLFF_STATUE                  # experiment name
 # pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
 ckpt_path: null
-# ckpt_path: ckpts/colmap/LLFF_WD/epoch=4_slim.ckpt  # show_gui
+# ckpt_path: ckpts/nerfpp/LLFF_STATUE/epoch=4_slim.ckpt  # show_gui
 # pretrained checkpoint to load (excluding optimizers, etc)                 
 weight_path: null
 fix_encoder: False
+use_l1_loss: False
+use_depth_loss: False

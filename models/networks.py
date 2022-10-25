@@ -10,7 +10,7 @@ from .rendering import NEAR_DISTANCE
 
 
 class NGP(nn.Module):
-    def __init__(self, scale, rgb_act='Sigmoid'):
+    def __init__(self, scale, rgb_act='Sigmoid', hparams=None):
         super().__init__()
 
         self.rgb_act = rgb_act
@@ -29,7 +29,10 @@ class NGP(nn.Module):
             torch.zeros(self.cascades*self.grid_size**3//8, dtype=torch.uint8))
 
         # constants
-        L = 16; F = 2; log2_T = 19; N_min = 16
+        if hparams is None:
+            L = 16; F = 2; log2_T = 19; N_min = 16
+        else:
+            L, F, log2_T, N_min = hparams.L, hparams.F, hparams.log2_T, hparams.N_min
         b = np.exp(np.log(2048*scale/N_min)/(L-1)) # N_max = 2048*scale
         print(f'GridEncoding: Nmin={N_min} b={b:.5f} F={F} T=2^{log2_T} L={L}')
 

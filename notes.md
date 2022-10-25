@@ -24,6 +24,9 @@ python train.py --config [config_yml] --loop 1
 
 python show_gui.py --root_dir data/lego --exp_name LEGO_ST --dataset_name nerf --ckpt_path ckpts/nerf/LEGO_ST/epoch=9_slim.ckpt
 
+## Depth-aware style transfer
+python train_style_transfer_network.py --config config/style_transfer/depth_adain.yml
+
 ## NGP_pl Code
 model.density_grid 
 model.grid_coords
@@ -44,3 +47,9 @@ use PAMA
 depth loss 确实有点用。
 使用后，每一轮估计的深度图都基本可以保持不变。相比之下，不使用时，深度图会有明显变化。
 固定desity相关参数也可以使深度图基本不变，但整体效果只有颜色变了，而纹理很少保留。
+
+## 其他想法
+
+1. 一开始先进行内容保留较多的风格迁移，每次循环逐步增加风格化程度。
+2. 如果风格化图片已经比较一致了，为什么NeRF的渲染结果没有保留好细节。是否可以试试增加InstanNGP的多尺度层数或提高最低分辨率
+3. 迭代过程的意义是什么?对Gayts方法而言，可能是NeRF过程学到了几何先验，让初始图像更符合空间一致性，再通过继续优化提高风格化程度。对快速风格迁移而言，其本质是一个将内容图的特征图的前二阶距和风格图的对齐的过程。那么迭代过程就没有必要了。

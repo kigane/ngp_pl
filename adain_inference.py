@@ -8,7 +8,7 @@ from PIL import Image
 from torchvision import transforms
 from torchvision.utils import save_image
 
-import models.transfer_net as tnet
+import models.adain_net as tnet
 import utils
 from tqdm import tqdm
 from icecream import ic

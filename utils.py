@@ -72,18 +72,30 @@ def parse_args():
     """
     desc = "NeRF Style Transfer"
     parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('--basic', type=str,
+                        default='config/basic.yml', help='basic options')
     parser.add_argument('--config', type=str,
                         default='config/config.yml', help='specific options')
     parser.add_argument('--loop', type=int,
                         default=-1, help='number of loop(nerf->style_transfer)')
+    parser.add_argument('--style_image', type=str, help='the style image')
+    parser.add_argument('--exp_name', type=str, help='exp name')
     return check_args(parser.parse_args())
 
 
 def check_args(args):
     """combine arguments"""
+    with open(args.basic, 'r') as f:
+        basic_config = yaml.safe_load(f)
     with open(args.config, 'r') as f:
         specific_config = yaml.safe_load(f)
     args_dict = vars(args)
+    # 命令行参数优先
+    for k, v in args_dict.items():
+        if (k in specific_config.keys() or k in basic_config.keys()) and v is not None:
+            specific_config.pop(k, None)
+            basic_config.pop(k, None)
+    args_dict.update(basic_config)
     args_dict.update(specific_config)
     return args
 
@@ -170,6 +182,51 @@ def save_video(hparams):
     # imageio.mimsave(os.path.join(save_dir, f'{hparams.loop}.mp4'), [imageio.imread(img) for img in nerf_render_rets], fps=24, macro_block_size=1)
     # imageio.mimsave(os.path.join(save_dir, f's_{hparams.loop}.mp4'), [imageio.imread(img) for img in stylized_rets], fps=24, macro_block_size=1)
     imageio.mimsave(os.path.join(save_dir, f'combined_{hparams.loop}.mp4'), combined, fps=hparams.fps, macro_block_size=1)
+
+
+def numpy2cv2(cont,style,prop,width,height):
+    cont = cont.transpose((1,2,0))
+    cont = cont[...,::-1]
+    cont = cont * 255
+    cont = cv.resize(cont,(width,height))
+    #cv.resize(iimg,(width,height))
+    style = style.transpose((1,2,0))
+    style = style[...,::-1]
+    style = style * 255
+    style = cv.resize(style,(width,height))
+
+    prop = prop.transpose((1,2,0))
+    prop = prop[...,::-1]
+    prop = prop * 255
+    prop = cv.resize(prop,(width,height))
+
+    #return np.concatenate((cont,np.concatenate((style,prop),axis=1)),axis=1)
+    return prop,cont
+
+
+def makeVideo(content,style,props,outf):
+    print('Stack transferred frames back to video...')
+    layers,height,width = content[0].shape
+    fourcc = cv.VideoWriter_fourcc(*'MJPG')
+    # fourcc = cv.VideoWriter_fourcc(*'mp4v')
+    video = cv.VideoWriter(os.path.join(outf,'transfer.avi'),fourcc,10.0,(width,height))
+    ori_video = cv.VideoWriter(os.path.join(outf,'content.avi'),fourcc,10.0,(width,height))
+    for j in range(len(content)):
+        prop,cont = numpy2cv2(content[j],style,props[j],width,height)
+        cv.imwrite('prop.png',prop)
+        cv.imwrite('content.png',cont)
+       
+        imgj = cv.imread('prop.png')
+        imgc = cv.imread('content.png')
+
+        video.write(imgj)
+        ori_video.write(imgc)
+        # RGB or BRG, yuks
+    video.release()
+    ori_video.release()
+    os.remove('prop.png')
+    os.remove('content.png')
+    print('Transferred video saved at %s.'%outf)
 
 #-------------------------------model----------------------------------------
 
@@ -359,22 +416,25 @@ def calc_histogram_loss(A, B, histogram_block):
 
     return histogram_loss
     
+    
 # B, C, H, W; mean var on HW
-def calc_mean_std(feat, eps=1e-5):
-    # eps is a small value added to the variance to avoid divide-by-zero.
-    size = feat.size()
-    assert (len(size) == 4)
-    N, C = size[:2]
-    feat_var = feat.view(N, C, -1).var(dim=2) + eps
-    feat_std = feat_var.sqrt().view(N, C, 1, 1)
-    feat_mean = feat.view(N, C, -1).mean(dim=2).view(N, C, 1, 1)
-    return feat_mean, feat_std
+# def calc_mean_std(feat, eps=1e-5):
+#     # eps is a small value added to the variance to avoid divide-by-zero.
+#     size = feat.size()
+#     assert (len(size) == 4)
+#     N, C = size[:2]
+#     feat_var = feat.view(N, C, -1).var(dim=2) + eps
+#     feat_std = feat_var.sqrt().view(N, C, 1, 1)
+#     feat_mean = feat.view(N, C, -1).mean(dim=2).view(N, C, 1, 1)
+#     return feat_mean, feat_std
+
 
 def mean_variance_norm(feat):
     size = feat.size()
     mean, std = calc_mean_std(feat)
     normalized_feat = (feat - mean.expand(size)) / std.expand(size)
     return normalized_feat
+
 
 def train_transform():
     transform_list = [
@@ -384,12 +444,14 @@ def train_transform():
     ]
     return transforms.Compose(transform_list)
 
+
 def test_transform(w, h):
     transform_list = []
     transform_list.append(transforms.Resize(size=(h, w)))
     transform_list.append(transforms.ToTensor())
     transform = transforms.Compose(transform_list)
     return transform
+
 
 # https://discuss.pytorch.org/t/check-gradient-flow-in-network/15063/7
 def plot_grad_flow(named_parameters):
@@ -410,6 +472,7 @@ def plot_grad_flow(named_parameters):
             print(n, p.grad.abs().mean(), p.grad.abs().max())
             print('-'*82)
 
+
 def InfiniteSampler(n):
     # i = 0
     i = n - 1
@@ -422,6 +485,7 @@ def InfiniteSampler(n):
             order = np.random.permutation(n)
             i = 0
 
+
 class InfiniteSamplerWrapper(data.sampler.Sampler):
     def __init__(self, data_source):
         self.num_samples = len(data_source)
@@ -431,6 +495,7 @@ class InfiniteSamplerWrapper(data.sampler.Sampler):
 
     def __len__(self):
         return 2 ** 31
+
 
 class FlatFolderDataset(data.Dataset):
     def __init__(self, root, transform):
@@ -451,11 +516,13 @@ class FlatFolderDataset(data.Dataset):
     def name(self):
         return 'FlatFolderDataset'
 
+
 def adjust_learning_rate(optimizer, iteration_count, args):
     """Imitating the original implementation"""
     lr = args.lr / (1.0 + 5e-5 * iteration_count)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
 
 def cosine_dismat(A, B):
     A = A.view(A.shape[0], A.shape[1], -1)
@@ -470,6 +537,7 @@ def cosine_dismat(A, B):
 
     return dismat
 
+
 def calc_remd_loss(A, B):
     C = cosine_dismat(A, B)
     m1, _ = C.min(1)
@@ -479,12 +547,14 @@ def calc_remd_loss(A, B):
 
     return remd
 
+
 def calc_ss_loss(A, B):
     MA = cosine_dismat(A, A)
     MB = cosine_dismat(B, B)
     Lself_similarity = torch.abs(MA-MB).mean() 
 
     return Lself_similarity
+
 
 def calc_moment_loss(A, B):
     A = A.view(A.shape[0], A.shape[1], -1)
@@ -502,6 +572,36 @@ def calc_moment_loss(A, B):
     loss = mu_d + cov_d
     return loss
 
+
 def calc_mse_loss(A, B):
     return mse(A, B)
 
+###############################
+### CCPL
+###############################
+def calc_mean(feat):
+    size = feat.size()
+    assert (len(size) == 4)
+    N, C = size[:2]
+    feat_mean = feat.view(N, C, -1).mean(dim=2).view(N, C, 1, 1)
+    return feat_mean
+
+
+def nor_mean_std(feat):
+    size = feat.size()
+    mean, std = calc_mean_std(feat)
+    nor_feat = (feat - mean.expand(size)) / std.expand(size)
+    return nor_feat
+
+
+def nor_mean(feat):
+    size = feat.size()
+    mean = calc_mean(feat)
+    nor_feat = feat - mean.expand(size)
+    return nor_feat, mean    
+
+
+def calc_cov(feat):
+    feat = feat.flatten(2, 3)
+    f_cov = torch.bmm(feat, feat.permute(0,2,1)).div(feat.size(2))
+    return f_cov

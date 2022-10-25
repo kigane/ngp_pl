@@ -15,6 +15,7 @@ import yaml
 from gayts import neural_style_transfer
 from adain_inference import style_transfer_one_image
 from pama_inference import pama_infer_one_image
+from CCPL_inference import ccpl_inference_frames
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
 from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
@@ -67,7 +68,7 @@ class NeRFSystem(LightningModule):
                 p.requires_grad = False
 
         rgb_act = 'None' if self.hparams.use_exposure else 'Sigmoid'
-        self.model = NGP(scale=self.hparams.scale, rgb_act=rgb_act)
+        self.model = NGP(scale=self.hparams.scale, rgb_act=rgb_act, hparams=self.hparams)
         # 注册两个buffer-- density_grid & grid_coords
         G = self.model.grid_size # 128
         self.model.register_buffer('density_grid', # multi-scale：cascades层，每层grid的大小为G**3
@@ -142,6 +143,7 @@ class NeRFSystem(LightningModule):
             self.register_parameter('dT',
                 nn.Parameter(torch.zeros(N, 3, device=self.device)))
 
+        # 加载模型
         if hparams.loop > 0:
             load_ngp_ckpt(self.model, hparams.ckpt_path_pre)
         else:
@@ -308,6 +310,7 @@ class NeRFSystem(LightningModule):
 if __name__ == '__main__':
     hparams = parse_args()
     flogger = get_logger()
+    # ic(hparams)
 
     # 开始新的NeRF Style Transfer时，删除旧文件
     if hparams.loop == 0:
@@ -398,19 +401,21 @@ if __name__ == '__main__':
         yaml.safe_dump(hparams.__dict__, f)
     
     print("开始风格迁移")
-    
-    if hparams.style_transfer_method == 'gayts':
-        style_transfer = neural_style_transfer
-    elif hparams.style_transfer_method == 'adain':
-        style_transfer = style_transfer_one_image
-    elif hparams.style_transfer_method == 'pama':
-        style_transfer = pama_infer_one_image
+    if hparams.style_transfer_method == 'ccpl':
+        ccpl_inference_frames(result_dir, hparams.style_image, hparams)
     else:
-        raise NotImplementedError(f"{hparams.style_transfer_method} is not supported")
-    
-    for path in tqdm(rgb_paths):
-        hparams.content_image = path #? 我为什么要写这一行
-        style_transfer(path, hparams.style_image, hparams)
-    
+        if hparams.style_transfer_method == 'gayts':
+            style_transfer = neural_style_transfer
+        elif hparams.style_transfer_method == 'adain':
+            style_transfer = style_transfer_one_image
+        elif hparams.style_transfer_method == 'pama':
+            style_transfer = pama_infer_one_image
+        else:
+            raise NotImplementedError(f"{hparams.style_transfer_method} is not supported")
+        
+        for path in rgb_paths:
+            hparams.content_image = path #? 我为什么要写这一行
+            style_transfer(path, hparams.style_image, hparams)
+
     # 保存一下NeRF渲染结果和单独风格化后结果的视频
     save_video(hparams)

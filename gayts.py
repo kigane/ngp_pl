@@ -4,7 +4,7 @@ import utils
 
 from torch.autograd import Variable
 from torch.optim import LBFGS, Adam
-import models.transfer_net as tnet
+import models.adain_net as tnet
 
 
 def build_loss(net, optimizing_img, target_representations, hparams):
@@ -48,12 +48,10 @@ def make_tuning_step(neural_net, optimizer, target_representations, hparams):
 def neural_style_transfer(content_img_path, style_img_path, hparams):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    ic("read content and style image")
-    content_img = utils.prepare_img(content_img_path, hparams.height, device)
-    style_img = utils.prepare_img(style_img_path, hparams.height, device)
+    content_img = utils.prepare_img(content_img_path, hparams.content_size, device)
+    style_img = utils.prepare_img(style_img_path, hparams.style_size, device)
 
     # 待优化图像初始化
-    ic("initialize content image")
     if hparams.init_method == 'random':
         gaussian_noise_img = np.random.normal(loc=0, scale=90., size=content_img.shape).astype(np.float32)
         init_img = torch.from_numpy(gaussian_noise_img).float().to(device)
@@ -73,7 +71,6 @@ def neural_style_transfer(content_img_path, style_img_path, hparams):
     encoder.to(device)
 
     #! 内容图像和风格图像分别喂给VGG，并返回特征图[relu1_1, relu2_1, relu3_1, conv4_2, relu4_1, relu5_1]
-    ic("extract features")
     content_img_set_of_feature_maps = encoder(content_img)
     style_img_set_of_feature_maps = encoder(style_img)
 
@@ -84,7 +81,6 @@ def neural_style_transfer(content_img_path, style_img_path, hparams):
     #
     # Start of optimization procedure
     #
-    ic('start optimizing')
     if hparams.optimizer == 'adam':
         optimizer = Adam((optimizing_img,), lr=hparams.lr_st)
         tuning_step = make_tuning_step(encoder, optimizer, target_representations, hparams)
