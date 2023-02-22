@@ -272,6 +272,8 @@ if __name__ == '__main__':
     img1 = img1_1.to(device)
     img2 = img1_2.to(device)
     with torch.no_grad():
+        # 预测光流：返回一系列(12个，递归神经网络模型的迭代次数)迭代预测的光流值，最后一个是最准确的。  
+        # 注意，预测的光流值单位是像素，没有被归一化。
         fw_flows = model(img1, img2)
         fw_flow = fw_flows[-1].cpu() # (N,2,H,W)
         
@@ -286,14 +288,11 @@ if __name__ == '__main__':
     # 用光流预测simg1
     warp_simg1 = warp(img2_1, fw_flow)
 
-    # 预测光流：返回一系列(12个，递归神经网络模型的迭代次数)迭代预测的光流值，最后一个是最准确的。
-    # list_of_flows = model(img1_batch.to(device), img2_batch.to(device))
-    # predicted_flows = list_of_flows[-1] # (N,2,H,W)
-    # 注意，预测的光流值单位是像素，没有被归一化。
 
     # 光流可视化
-    # flow_imgs = flow_to_image(predicted_flows.detach().cpu())
+    flow_imgs = flow_to_image(fw_flow.detach().cpu())
     # The images have been mapped into [-1, 1] but for plotting we want them in [0, 1]
+    flow_imgs = [(img + 1) / 2 for img in flow_imgs]
 
     # imgs = warp(img1_batch.to(device), predicted_flows)
     img1_batch = [(img1 + 1) / 2 for img1 in img1_1]
@@ -305,7 +304,7 @@ if __name__ == '__main__':
     occ_imgs = torch.stack(imgs) * (1-fw_occ.unsqueeze(1))
     # img2_batch = torch.stack(img2_batch) * (1-fw_occ.unsqueeze(1))
     # imgs = [torch.abs(img - img1) for img, img1 in zip(imgs, img2_batch)]
-    grid = [[a, b, c, d, e] for (a, b, c, d, e) in zip(img1_batch, img2_batch, imgs, repeat(fw_occ, 'n h w -> n c h w', c=3), occ_imgs)]
+    grid = [[a, b, c, d, e, f] for (a, b, c, d, e, f) in zip(img1_batch, img2_batch, imgs, repeat(fw_occ, 'n h w -> n c h w', c=3), occ_imgs, flow_imgs)]
     plot2(grid)
     plt.show()
 
