@@ -10,6 +10,7 @@ class BaseDataset(Dataset):
         self.root_dir = root_dir
         self.split = split
         self.downsample = downsample
+        self.img_paths = []
 
     def read_intrinsics(self):
         raise NotImplementedError
@@ -34,7 +35,12 @@ class BaseDataset(Dataset):
             if self.rays.shape[-1] == 4: # HDR-NeRF data
                 sample['exposure'] = rays[:, 3:]
         else:
-            sample = {'pose': self.poses[idx], 'img_idxs': idx}
+            # img_paths由子类提供，目的是保存原始图像的mask。部分数据集需要。
+            if len(self.img_paths) > 0:
+                sample = {'pose': self.poses[idx], 'img_idxs': idx, 'img_path': self.img_paths[idx]}
+            else:
+                sample = {'pose': self.poses[idx], 'img_idxs': idx}
+
             if len(self.rays)>0: # if ground truth available
                 rays = self.rays[idx]
                 sample['rgb'] = rays[:, :3]

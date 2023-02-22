@@ -102,7 +102,7 @@ def neural_style_transfer(content_img_path, style_img_path, hparams):
             if total_loss.requires_grad:
                 total_loss.backward()
             with torch.no_grad():
-                print(f'L-BFGS | iteration: {cnt:03}, total loss={total_loss.item():12.2f}, content_loss={hparams.content_weight * content_loss.item():12.2f}, style loss={hparams.style_weight * style_loss.item():12.2f}, tv loss={hparams.tv_weight * tv_loss.item():12.2f}')
+                # print(f'L-BFGS | iteration: {cnt:03}, total loss={total_loss.item():12.2f}, content_loss={hparams.content_weight * content_loss.item():12.2f}, style loss={hparams.style_weight * style_loss.item():12.2f}, tv loss={hparams.tv_weight * tv_loss.item():12.2f}')
                 utils.save_and_maybe_display(optimizing_img, cnt, hparams, should_display=False)
 
             cnt += 1
@@ -111,5 +111,41 @@ def neural_style_transfer(content_img_path, style_img_path, hparams):
         optimizer.step(closure)
 
 if __name__ == '__main__':
-    hparams = utils.parse_args()
-    neural_style_transfer(hparams.content_image, hparams.style_image, hparams)
+    from icecream import ic
+    from tqdm import tqdm
+    # hparams = utils.parse_args()
+    # neural_style_transfer(hparams.content_image, hparams.style_image, hparams)
+    
+    from utils import parse_args
+    hparams = parse_args()
+    # hparams.content = 'results/001.png'
+    hparams.style = 'data/styles/122.jpg'
+    hparams.out_dir = 'results'
+    hparams.save_ext = '.jpg'
+    hparams.image_wh = (800, 600)
+    # hparams.content = "results/001.png"
+    hparams.content = "results/001_s_12202jpg_lbfgs.jpg"
+    optimizer = 'adam' # adma
+    
+    contents = [
+        "results/001.png",
+        f"results/001_s_12201_{optimizer}.jpg",
+        f"results/001_s_12202_{optimizer}.jpg",
+        f"results/001_s_12203_{optimizer}.jpg",
+        f"results/001_s_12204_{optimizer}.jpg",
+    ]
+    
+    style_images = [ # this only related to output filename
+        'data/styles/12201.jpg',
+        'data/styles/12202.jpg',
+        'data/styles/12203.jpg',
+        'data/styles/12204.jpg',
+        'data/styles/12205.jpg'
+    ]
+    
+    for c, s in tqdm(zip(contents, style_images)):
+        ic(c, s)
+        hparams.content = c
+        # use this parameter to modify output filename 
+        hparams.style_image = s
+        neural_style_transfer(hparams.content, hparams.style, hparams)

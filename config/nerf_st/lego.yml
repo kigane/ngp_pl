@@ -1,112 +1,26 @@
-#-------------------------------basic----------------------------------------
-
-num_gpus: 1             # number of gpus
-use_wandb: False        # use wandb or tensorboard
-
-#-------------------------------data-----------------------------------------
-
+exp_name: LEGO_PAMA               # experiment name
 root_dir: data/lego               # root directory of dataset
+ckpt_path: null
 dataset_name: nerf                # [nerf | nsvf | colmap | nerfpp | rtmv] 
 split: train                      # [train | trainval| trainvaltest] 
 downsample: 1.0                   # downsample factor (<=1.0) for the images
-
-#-------------------------------model----------------------------------------
-
-scale: 0.5                        # scene scale (whole scene must lie in [-scale, scale]^3
-use_exposure: False               # whether to train in HDR-NeRF setting
-
-#-------------------------------training-------------------------------------
-
-distortion_loss_w: 0.0            # weight of distortion loss (see losses.py), 0 to disable (default), to enable, a good value is 1e-3 for real scene and 1e-2 for synthetic scene
-
+scale: 0.5                        # scene scale (whole scene must lie in 
 batch_size: 8192                  # number of rays in a batch
 ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
 num_epochs: 5                     # number of training epochs
-lr: 1.e-2                         # learning rate
-
-# experimental args
-optimize_ext: False               # whether to optimize extrinsics
-random_bg: False                  # whether to train with random bg color (real scene only) to avoid objects with black color to be predicted as transparent
-use_l1_loss: False
-use_depth_loss: True
-
-#-------------------------------validation-----------------------------------
-
-eval_lpips: False                 # evaluate lpips metric (consumes more VRAM)
-val_only: False                   # run only validation (need to provide ckpt_path)
-no_save_test: False               # whether to save test image and video
-
-#-------------------------------misc-----------------------------------------
-
-exp_name: LEGO_CCPL_DLOSS               # experiment name
-# pretrained checkpoint to load (including optimizers, etc). commonly 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
-ckpt_path: null
-# ckpt_path: ckpts/colmap/LLFF_FLOWER_ST_FIX/epoch=4-v3.ckpt  # show_gui
-# pretrained checkpoint to load (excluding optimizers, etc)                 
+lr: 1.e-2                         # learning rate              
 weight_path: null
-fps: 15 # result video fps
-
-# checkpoints: 'ckpts/dataset_name/exp_name/epoch=xx_slim.ckpt'
-# logs: 'logs/dataset_name/exp_name/'
-# results: 'results/dataset_name/exp_name/xxx.png|xxx_d.png'
-# results: 'results/dataset_name/exp_name/#loop/xxx.png|xxx_d.png'
+fps: 10 # result video fps
+use_depth_loss: False
 
 #-------------------------------style transfer-------------------------------
 
-style_transfer_method: ccpl # [gayts(too slow) | adain | pama | ccpl]
-fix_encoder: False
+style_transfer_method: pama # [gayts(too slow) | adain | pama | ccpl]
+style_image: data/styles/73.jpg
 
-style_image: data/styles/14.jpg
-vgg_pretrained: data/pretrained/adain/vgg_normalised.pth
-decoder_pretrained: data/pretrained/adain/decoder.pth
-save_ext: .jpg
-
-# ccpl
-testing_mode: art # Artistic or Photo-realistic                    
-vgg: data/pretrained/ccpl/vgg_normalised.pth
-decoder: data/pretrained/ccpl/decoder_iter_160000.pth.tar # decoder to load
-SCT: data/pretrained/ccpl/sct_iter_160000.pth.tar # SCT module to load
-preserve_color: False # If specified, preserve color of the content image')
-# adain & ccpl
 content_size: # h, w
   - 800
   - 800
 style_size:
   - 800
   - 800
-crop: False # do center crop to create squared image
-alpha: 1.0 # more content [0 ------> 1] more style
-
-# pama
-checkpoints: data/pretrained/pama/original
-training: False # control PAMANet forward path
-pretrained: True
-requires_grad: False
-
-# gayts
-# height: 800
-# init_method: content
-# vgg_ckpt_path: data/pretrained/vgg_normalised.pth #FIXME repeat
-# optimizer: adam # [lbfgs | adam]
-# iterations: 3000 # [ 1000 | 3000] correspond to optimizer
-# saving_freq: -1 # -1:only save final image
-
-# lr_st: 0.01
-# content_weight: 10
-# style_weight: 1
-# tv_weight: 0.001
-
-# features: 
-#   - relu1_1
-#   - relu2_1
-#   - relu3_1
-#   - relu4_1
-#   - conv4_2
-#   - relu5_1
-# content_feature_index: 4
-# style_features_indices: 
-#   - 0
-#   - 1
-#   - 2
-#   - 3
-#   - 5

@@ -1,3 +1,5 @@
+import cv2
+from matplotlib.colors import Normalize
 import torch
 import torch.nn as nn
 from torchvision.io import read_video
@@ -9,6 +11,8 @@ import numpy as np
 import warnings
 from einops import rearrange, repeat
 from icecream import ic
+from PIL import Image
+import utils
 
 warnings.filterwarnings('ignore')
 
@@ -36,6 +40,20 @@ def plot(imgs, **imshow_kwargs):
             img = F.to_pil_image(img.to("cpu"))
             ax.imshow(np.asarray(img), **imshow_kwargs)
             ax.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+
+    plt.tight_layout()
+
+def plot2(imgs, **imshow_kwargs):
+    if not isinstance(imgs[0], list):
+        # Make a 2d grid even if there's just 1 row
+        imgs = [imgs]
+
+    _, axs = plt.subplots(nrows=2, ncols=3, squeeze=False)
+    axes = axs.reshape(-1)
+    for idx, img in enumerate(imgs[0]):
+        img = F.to_pil_image(img.to("cpu"))
+        axes[idx].imshow(np.asarray(img), norm=Normalize(0, 1), **imshow_kwargs)
+        axes[idx].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
     plt.tight_layout()
 
@@ -177,49 +195,123 @@ def temporal_warp_error(img1, img2, model):
 
 
 
-frames, _, _ = read_video('./basketball.mp4')
+@torch.no_grad()
+def style_warp_error(img1, img2, simg1, simg2):
+    """
+    img1->img2 ==> fw_flow
+    img2->img1 ==> bw_flow
+    fw_occ = detect_occlusion(fw_flow, bw_flow)
+    simg1--fw_flow-->warp_simg1
+    mse(simg2, wawrp_simg1, mask=1-fw_occ)
+    
+    img1: (N,C,H,W) [-1,1]
+    img2: (N,C,H,W) [-1,1]
+    model: RAFT
+    """
+    weights = Raft_Large_Weights.C_T_SKHT_K_V2
+    # 加载RAFT模型
+    model = raft_large(weights=weights, progress=False).to(device)
+    model = model.eval()
+    img1 = img1.to(device)
+    img2 = img2.to(device)
+    # 计算前向光流
+    fw_flows = model(img1, img2)
+    fw_flow = fw_flows[-1] # (N,2,H,W)
+    # 计算后向光流
+    bw_flows = model(img2, img1)
+    bw_flow = bw_flows[-1] # (N,2,H,W)
+    # 计算occlusion (N, H, W)
+    fw_occ = detect_occlusion(
+                rearrange(bw_flow, 'n c h w -> n h w c', c=2),
+                rearrange(fw_flow, 'n c h w -> n h w c', c=2))
+    # 用光流预测simg1
+    warp_simg1 = warp(simg1, fw_flow.cpu())
+    # 计算warp_simg1和simg2的差异
+    diff = rearrange(torch.square(warp_simg1-simg2), 'n c h w -> n h w c') *\
+            repeat(1-fw_occ.cpu(), 'n h w -> n h w c', c=3)
+    return diff.mean((1, 2, 3))
+
+# frames, _, _ = read_video('./basketball.mp4')
 # (N,H,W,C) --> (N,C,H,W)
-frames = frames.permute(0, 3, 1, 2)
+# frames = frames.permute(0, 3, 1, 2)
 
 # 构造模型输入(N,C,H,W)
 # img1_batch = torch.stack([frames[100], frames[150]])
-img1_batch = torch.stack([frames[100]])
 # img2_batch = torch.stack([frames[109], frames[159]])
-img2_batch = torch.stack([frames[109]])
+# img1_batch = torch.stack([frames[100]])
+# img2_batch = torch.stack([frames[109]])
 
-# 图片预处理：值域映射到[-1,1]和resize
-img1_batch, img2_batch = preprocess(img1_batch, img2_batch)
+def prepare_image_tensor(path, tf):
+    img = Image.open(path).convert("RGB")
+    img_t = tf(img)
+    return img_t.unsqueeze(0)
 
-# 加载模型和权重
-model = raft_large(weights=Raft_Large_Weights.C_T_SKHT_K_V2, progress=False).to(device)
-model = model.eval()
+if __name__ == '__main__':
+    from torchvision import transforms as tf
+    
+    img_tf = tf.Compose([
+        tf.ToTensor(),
+        tf.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+    
+    img1_1 = prepare_image_tensor("results/colmap/LLFF_FLOWER_ST_PAMA_DEPTH_3/0/000.png", img_tf)
+    img1_2 = prepare_image_tensor("results/colmap/LLFF_FLOWER_ST_PAMA_DEPTH_3/0/001.png", img_tf)
+    img2_1 = prepare_image_tensor("results/colmap/LLFF_FLOWER_ST_PAMA_DEPTH_3/1/000.png", img_tf)
+    img2_2 = prepare_image_tensor("results/colmap/LLFF_FLOWER_ST_PAMA_DEPTH_3/1/001.png", img_tf)
+    ic(img1_1.shape)
+    ic(img2_1.shape)
 
-img1_batch.requires_grad_(False)
-img2_batch.requires_grad_(False)
-fw_occ = temporal_warp_error(img1_batch.to(device), img2_batch.to(device), model)
+    # 图片预处理：值域从[0, 1]映射到[-1,1]和resize
+    # img1_batch, img2_batch = preprocess(img1_batch, img2_batch)
 
-torch.cuda.empty_cache()
-# 预测光流：返回一系列(12个，递归神经网络模型的迭代次数)迭代预测的光流值，最后一个是最准确的。
-list_of_flows = model(img1_batch.to(device), img2_batch.to(device))
-predicted_flows = list_of_flows[-1] # (N,2,H,W)
-# 注意，预测的光流值单位是像素，没有被归一化。
+    # 加载模型和权重
+    model = raft_large(weights=Raft_Large_Weights.C_T_SKHT_K_V2, progress=False).to(device)
+    model = model.eval()
+    # fw_occ = temporal_warp_error(img1_batch.to(device), img2_batch.to(device), model)
+    # 计算前向光流
+    img1 = img1_1.to(device)
+    img2 = img1_2.to(device)
+    with torch.no_grad():
+        fw_flows = model(img1, img2)
+        fw_flow = fw_flows[-1].cpu() # (N,2,H,W)
+        
+        # 计算后向光流
+        bw_flows = model(img2, img1)
+        bw_flow = bw_flows[-1].cpu() # (N,2,H,W)
+    
+    # 计算occlusion (N, H, W)
+    fw_occ = detect_occlusion(
+                rearrange(bw_flow, 'n c h w -> n h w c', c=2),
+                rearrange(fw_flow, 'n c h w -> n h w c', c=2))
+    # 用光流预测simg1
+    warp_simg1 = warp(img2_1, fw_flow)
 
-# 光流可视化
-flow_imgs = flow_to_image(predicted_flows.detach().cpu())
-# The images have been mapped into [-1, 1] but for plotting we want them in [0, 1]
+    # 预测光流：返回一系列(12个，递归神经网络模型的迭代次数)迭代预测的光流值，最后一个是最准确的。
+    # list_of_flows = model(img1_batch.to(device), img2_batch.to(device))
+    # predicted_flows = list_of_flows[-1] # (N,2,H,W)
+    # 注意，预测的光流值单位是像素，没有被归一化。
 
-imgs = warp(img1_batch.to(device), predicted_flows)
-img1_batch = [(img1 + 1) / 2 for img1 in img1_batch]
-img2_batch = [(img2 + 1) / 2 for img2 in img2_batch]
-imgs = [(img + 1) / 2 for img in imgs]
-# imgs = [torch.abs(img - img1) for img, img1 in zip(imgs, img2_batch)]
-grid = [[a, b, c, d, e] for (a, b, c, d, e) in zip(img1_batch, img2_batch, flow_imgs, imgs, repeat(fw_occ, 'n h w -> n c h w', c=3))]
-plot(grid)
-plt.show()
+    # 光流可视化
+    # flow_imgs = flow_to_image(predicted_flows.detach().cpu())
+    # The images have been mapped into [-1, 1] but for plotting we want them in [0, 1]
+
+    # imgs = warp(img1_batch.to(device), predicted_flows)
+    img1_batch = [(img1 + 1) / 2 for img1 in img1_1]
+    img2_batch = [(img2 + 1) / 2 for img2 in img2_2]
+    # imgs = [(img + 1) / 2 for img in imgs]
+    imgs = [(img + 1) / 2 for img in warp_simg1]
+    # ic(imgs.shape)
+    ic(fw_occ.shape)
+    occ_imgs = torch.stack(imgs) * (1-fw_occ.unsqueeze(1))
+    # img2_batch = torch.stack(img2_batch) * (1-fw_occ.unsqueeze(1))
+    # imgs = [torch.abs(img - img1) for img, img1 in zip(imgs, img2_batch)]
+    grid = [[a, b, c, d, e] for (a, b, c, d, e) in zip(img1_batch, img2_batch, imgs, repeat(fw_occ, 'n h w -> n c h w', c=3), occ_imgs)]
+    plot2(grid)
+    plt.show()
 
 
-# 几个问题
-# 为什么输入img2和前向光流可以预测img_1，不应该是反过来的吗？由计算方式决定。
-# 没有对应的点的颜色是怎么确定的？padding_mode决定。
-# 为什么会有一大片蓝色？ warp后的图片没有归一化。
-# occlusion mask是怎么计算的，表示什么？
+    # 几个问题
+    # 为什么输入img2和前向光流可以预测img_1，不应该是反过来的吗？由计算方式决定。
+    # 没有对应的点的颜色是怎么确定的？padding_mode决定。
+    # 为什么会有一大片蓝色？ warp后的图片没有归一化。
+    # occlusion mask是怎么计算的，表示什么？

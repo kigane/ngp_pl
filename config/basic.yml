@@ -6,12 +6,16 @@ optimize_ext: False               # whether to optimize extrinsics
 random_bg: False                  # whether to train with random bg color (real scene only) to avoid objects with black color to be predicted as transparent
 
 split: train                      # [train | trainval| trainvaltest] 
+test_split: test
+
 L: 16 # 多尺度特征层数。原始值: 16 
 F: 2  # 每层特征维度。原始值: 2 
 log2_T: 19 # 哈希表大小。原始值: 19 
 N_min: 16 #　最低分辨率。原始值: 16 最高分辨率为2048
 use_l1_loss: False
 use_depth_loss: True
+use_mod_ngp: False
+weight_path: null
 
 eval_lpips: False                 # evaluate lpips metric (consumes more VRAM)
 val_only: False                   # run only validation (need to provide ckpt_path)
@@ -21,9 +25,10 @@ fix_encoder: False
 
 vgg_pretrained: data/pretrained/adain/vgg_normalised.pth
 decoder_pretrained: data/pretrained/adain/decoder.pth
-save_ext: .jpg
+save_ext: .png
 
 # pama
+# [original | PAMA_1.5_color | PAMA_1.5_content | PAMA_without_color]
 checkpoints: data/pretrained/pama/original
 training: False # control PAMANet forward path
 pretrained: True
@@ -32,7 +37,7 @@ requires_grad: False
 # ccpl
 testing_mode: art # Artistic or Photo-realistic                    
 vgg: data/pretrained/ccpl/vgg_normalised.pth
-decoder: data/pretrained/ccpl/decoder_iter_160000.pth.tar # decoder to load
+ccpl_decoder: data/pretrained/ccpl/decoder_iter_160000.pth.tar # decoder to load
 SCT: data/pretrained/ccpl/sct_iter_160000.pth.tar # SCT module to load
 preserve_color: False # If specified, preserve color of the content image')
 # adain & ccpl
@@ -46,11 +51,11 @@ crop: False # do center crop to create squared image
 alpha: 1.0 # more content [0 ------> 1] more style
 
 # gayts
-height: 800
+height: 600
 init_method: content
-vgg_ckpt_path: data/pretrained/vgg_normalised.pth #FIXME repeat
-optimizer: adam # [lbfgs | adam]
-iterations: 3000 # [ 1000 | 3000] correspond to optimizer
+vgg_ckpt_path: data/pretrained/adain/vgg_normalised.pth #FIXME repeat
+optimizer: lbfgs # [lbfgs | adam]
+iterations: 1000 # [ 1000 | 3000] correspond to optimizer
 saving_freq: -1 # -1:only save final image
 
 lr_st: 0.01

@@ -1,5 +1,5 @@
-content_image: results/nerf/LEGO/raw/000.png
-style_image: data/styles/14.jpg
+content_image: results/nerf/LEGO/raw/001.png
+style_image: data/styles/122.jpg
 height: 800
 init_method: content
 vgg_ckpt_path: data/pretrained/adain/vgg_normalised.pth

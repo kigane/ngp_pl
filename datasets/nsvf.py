@@ -56,6 +56,7 @@ class NSVFDataset(BaseDataset):
     def read_meta(self, split):
         self.rays = []
         self.poses = []
+        self.img_paths = []
 
         if split == 'test_traj': # BlendedMVS and TanksAndTemple
             if 'Ignatius' in self.root_dir:
@@ -79,8 +80,11 @@ class NSVFDataset(BaseDataset):
             elif 'Synthetic' in self.root_dir: prefix = '2_' # test set for synthetic scenes
             elif split == 'test': prefix = '1_' # test set for real scenes
             else: raise ValueError(f'{split} split not recognized!')
+            
             img_paths = sorted(glob.glob(os.path.join(self.root_dir, 'rgb', prefix+'*.png')))
             poses = sorted(glob.glob(os.path.join(self.root_dir, 'pose', prefix+'*.txt')))
+            
+            self.img_paths = img_paths
 
             print(f'Loading {len(img_paths)} {split} images ...')
             for img_path, pose in tqdm(zip(img_paths, poses)):

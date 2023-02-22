@@ -1,0 +1,28 @@
+#-------------------------------data-----------------------------------------
+
+# root_dir: data/lego               # root directory of dataset
+root_dir: data/nerf_llff_data/flower  # [fern, leaves, flower, orchid, trex]
+exp_name: LLFF_FLOWER                 # experiment name
+desc: depth
+ckpt_path: null
+# ckpt_path: ckpts/colmap/LLFF_FLOWER_RAW/epoch=9_slim.ckpt  # show_gui
+dataset_name: colmap                # [nerf | nsvf | colmap | nerfpp | rtmv] 
+split: train                        # [train | trainval| trainvaltest] 
+downsample: 0.1985                  # downsample factor (<=1.0) for the images
+
+#-------------------------------model----------------------------------------
+
+scale: 1.0                        # scene scale (whole scene must lie in [-scale, scale]^3
+L: 16 # 多尺度特征层数。原始值: 16 
+F: 2  # 每层特征维度。原始值: 2 
+log2_T: 19 # 哈希表大小。原始值: 19 
+N_min: 16 #　最低分辨率。原始值: 16 
+
+#-------------------------------training-------------------------------------
+
+batch_size: 8192                  # number of rays in a batch
+ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
+num_epochs: 5                     # number of training epochs
+lr: 1.e-2                         # learning rate
+
+fps: 5 # result video fps

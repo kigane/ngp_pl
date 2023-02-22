@@ -2,6 +2,7 @@ from datetime import datetime
 import glob
 import os
 import shutil
+import cv2
 
 import imageio
 import numpy as np
@@ -29,18 +30,20 @@ from torch.utils.data import DataLoader
 # metrics
 from torchmetrics import PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
+import cv2 as cv
 
 from datasets import dataset_dict
 from datasets.ray_utils import axisangle_to_R, get_rays
 from losses import NeRFL1Loss, NeRFLoss
 from models.networks import NGP
+from models.networks2 import ModNGP
 from models.rendering import MAX_SAMPLES, render
-from utils import depth2img, load_ckpt, load_ngp_ckpt,slim_ckpt, parse_args, save_video, get_logger
+from utils import depth2img, load_ckpt, load_ngp_ckpt,slim_ckpt, parse_args, save_video, save_compare_video, get_logger
 from icecream import ic, install
 from tqdm import tqdm
 
 install()
-ic.configureOutput(prefix=lambda: datetime.now().strftime('%y-%m-%d %H:%M:%S | '),
+ic.configureOutput(prefix=lambda: datetime.now().strftime('%H:%M:%S | '),
                    includeContext=True)
 
 import warnings; warnings.filterwarnings("ignore")
@@ -53,12 +56,16 @@ class NeRFSystem(LightningModule):
 
         self.warmup_steps = 256
         self.update_interval = 16
-        if hparams.use_l1_loss:
+        # 定义loss
+        if hparams.use_l1_loss and hparams.loop > 0:
             flogger.debug("use NeRFL1Loss")
+            ic("use NeRFL1Loss")
             self.loss = NeRFL1Loss(lambda_distortion=self.hparams.distortion_loss_w)
         else:
             flogger.debug("use NeRFLoss(mse)")
             self.loss = NeRFLoss(lambda_distortion=self.hparams.distortion_loss_w)
+        
+        # NeRF指标
         self.train_psnr = PeakSignalNoiseRatio(data_range=1)
         self.val_psnr = PeakSignalNoiseRatio(data_range=1)
         self.val_ssim = StructuralSimilarityIndexMeasure(data_range=1)
@@ -68,7 +75,13 @@ class NeRFSystem(LightningModule):
                 p.requires_grad = False
 
         rgb_act = 'None' if self.hparams.use_exposure else 'Sigmoid'
-        self.model = NGP(scale=self.hparams.scale, rgb_act=rgb_act, hparams=self.hparams)
+
+        # 是否使用修改后的模型
+        if hparams.use_mod_ngp:
+            self.model = ModNGP(scale=self.hparams.scale, rgb_act=rgb_act, hparams=self.hparams)
+        else:
+            self.model = NGP(scale=self.hparams.scale, rgb_act=rgb_act, hparams=self.hparams)
+
         # 注册两个buffer-- density_grid & grid_coords
         G = self.model.grid_size # 128
         self.model.register_buffer('density_grid', # multi-scale：cascades层，每层grid的大小为G**3
@@ -76,6 +89,7 @@ class NeRFSystem(LightningModule):
         # ic(self.model.density_grid)
         self.model.register_buffer('grid_coords', # (1, G, G, G, 3) -> (G**3, 3)
             create_meshgrid3d(G, G, G, False, dtype=torch.int32).reshape(-1, 3))
+
 
     def forward(self, batch, split):
         """
@@ -102,31 +116,37 @@ class NeRFSystem(LightningModule):
 
         return render(self.model, rays_o, rays_d, **kwargs)
 
+
     def setup(self, stage):
         """
         setup dataset for each machine
         """
-        if hparams.loop < 1:
+        # 根据任务选择dataset，并设置好相应参数
+        if self.hparams.loop < 1:
             dataset = dataset_dict[self.hparams.dataset_name]
             kwargs = {'root_dir': self.hparams.root_dir,
                     'downsample': self.hparams.downsample,
                     'st': hparams.loop > -1}
         else:
             dataset = dataset_dict['stylized']
-            imgs_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/{self.hparams.loop-1}' # 上一轮渲染结果
+            # 上一轮渲染结果
+            imgs_dir = f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/{self.hparams.loop-1}' 
             kwargs = {'root_dir': self.hparams.root_dir,
                     'imgs_dir': imgs_dir,
                     'dataset_name': self.hparams.dataset_name,
                     'downsample': self.hparams.downsample,
-                    'st': hparams.loop > -1}
+                    'st': True,
+                    'use_guided_filter': hparams.use_guided_filter}
+
         self.train_dataset = dataset(split=self.hparams.split, **kwargs)
         self.train_dataset.batch_size = self.hparams.batch_size
         self.train_dataset.ray_sampling_strategy = self.hparams.ray_sampling_strategy
-
-        self.test_dataset = dataset(split='test', **kwargs)
+        # ic(dataset)
+        self.test_dataset = dataset(split=self.hparams.test_split, **kwargs)
         #! 保存渲染图片的大小
         self.image_wh = self.train_dataset.img_wh
         # ic(self.image_wh)
+
 
     def configure_optimizers(self):
         """
@@ -155,7 +175,7 @@ class NeRFSystem(LightningModule):
 
         net_params = []
         for n, p in self.named_parameters():
-            print(f"{n}:{p.shape}")
+            ic(f"{n}:{p.shape}")
             if n not in ['dR', 'dT']: net_params += [p]
 
         opts = []
@@ -238,11 +258,20 @@ class NeRFSystem(LightningModule):
             os.makedirs(self.val_dir, exist_ok=True)
 
     def validation_step(self, batch, batch_idx):
+        logs = {}
         rgb_gt = batch['rgb']
         pose = batch['pose']
+        # 对将背景分割出去的图片，保留其mask。后续用来对风格迁移结果进行裁剪。
+        if self.hparams.loop == 0 and self.hparams.dataset_name == 'nsvf':
+            test_img = cv.imread(batch['img_path'], cv.IMREAD_UNCHANGED)
+            if test_img.shape[2] == 4:
+                mask = (test_img[..., -1] > 0).astype(float)
+                # ic((mask > 0).sum())
+                # ic((mask == 0).sum())
+                # ic((mask < 0).sum())
+                logs['mask'] = mask
         results = self(batch, split='test')
 
-        logs = {}
         # compute each metric per image
         self.val_psnr(results['rgb'], rgb_gt)
         logs['psnr'] = self.val_psnr.compute()
@@ -265,6 +294,7 @@ class NeRFSystem(LightningModule):
             rgb_pred = rearrange(results['rgb'].cpu().numpy(), '(h w) c -> h w c', h=h)
             rgb_pred = (rgb_pred*255).astype(np.uint8)
             depth = depth2img(rearrange(results['depth'].cpu().numpy(), '(h w) -> h w', h=h))
+            # depth = rearrange(results['depth'].cpu().numpy(), '(h w) -> h w', h=h) # gray depth map
             imageio.imsave(os.path.join(self.val_dir, f'{idx:03d}.png'), rgb_pred)
             imageio.imsave(os.path.join(self.val_dir, f'{idx:03d}_d.png'), depth)
             if self.hparams.loop > -1:
@@ -279,38 +309,44 @@ class NeRFSystem(LightningModule):
         """
         outputs: validation_step返回值组成的list
         """
-        psnrs = torch.stack([x['psnr'] for x in outputs])
-        mean_psnr = all_gather_ddp_if_available(psnrs).mean()
-        self.log('test/psnr', mean_psnr, True)
+        if self.hparams.test_split != 'test_traj':
+            psnrs = torch.stack([x['psnr'] for x in outputs])
+            mean_psnr = all_gather_ddp_if_available(psnrs).mean()
+            self.log('test/psnr', mean_psnr, True)
 
-        ssims = torch.stack([x['ssim'] for x in outputs])
-        mean_ssim = all_gather_ddp_if_available(ssims).mean()
-        self.log('test/ssim', mean_ssim)
+            ssims = torch.stack([x['ssim'] for x in outputs])
+            mean_ssim = all_gather_ddp_if_available(ssims).mean()
+            self.log('test/ssim', mean_ssim)
 
-        if self.hparams.eval_lpips:
-            lpipss = torch.stack([x['lpips'] for x in outputs])
-            mean_lpips = all_gather_ddp_if_available(lpipss).mean()
-            self.log('test/lpips_vgg', mean_lpips)
+            if self.hparams.eval_lpips:
+                lpipss = torch.stack([x['lpips'] for x in outputs])
+                mean_lpips = all_gather_ddp_if_available(lpipss).mean()
+                self.log('test/lpips_vgg', mean_lpips)
         
         if self.hparams.loop > -1:
             img_pose = np.stack([x['pose'] for x in outputs], axis=0)
             np.save(f'{self.val_dir}/poses.npy', img_pose)
         
         if self.hparams.loop == 0:
+            # save depth and mask
             img_depths = np.stack([x['depth'] for x in outputs], axis=0)
             np.save(f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/depths.npy', img_depths)
+            if self.hparams.dataset_name == 'nsvf':
+                masks = np.stack([x['mask'] for x in outputs], axis=0)
+                np.save(f'results/{self.hparams.dataset_name}/{self.hparams.exp_name}/masks.npy', masks)
 
     def get_progress_bar_dict(self):
-        # don't show the version number
-        items = super().get_progress_bar_dict()
-        items.pop("v_num", None)
-        return items
+        tqdm_dict = super().get_progress_bar_dict()
+        tqdm_dict.pop("v_num", None)
+        return tqdm_dict
 
 
 if __name__ == '__main__':
+    # torch.set_float32_matmul_precision('highest') # 默认值
+    torch.set_float32_matmul_precision('high') # 降低浮点运算精度，提高计算速度
+    # torch.set_float32_matmul_precision('medium')
     hparams = parse_args()
     flogger = get_logger()
-    # ic(hparams)
 
     # 开始新的NeRF Style Transfer时，删除旧文件
     if hparams.loop == 0:
@@ -322,6 +358,7 @@ if __name__ == '__main__':
             shutil.rmtree(result_dir)
 
     # add ckpt_path_pre, used in SNeRF training
+    # 保存每次迭代产生的模型
     version = '' if hparams.loop < 2 else f'-v{hparams.loop-1}'
     hparams.ckpt_path_pre = f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/epoch={hparams.num_epochs-1}{version}.ckpt'
     
@@ -390,6 +427,7 @@ if __name__ == '__main__':
     result_dir = system.val_dir
     # 渲染图路径
     rgb_paths = [f"{result_dir}/{name}" for name in os.listdir(result_dir) if name.endswith('png') and 'd' not in name]
+    rgb_paths = sorted(rgb_paths)
     
     # Stylized Image输出到相同目录下
     hparams.out_dir = result_dir
@@ -401,8 +439,38 @@ if __name__ == '__main__':
         yaml.safe_dump(hparams.__dict__, f)
     
     print("开始风格迁移")
+    #! read masks
+    ic(hparams.image_wh)
+    if hparams.dataset_name == 'nsvf':
+        masks = np.load(os.path.split(result_dir)[0] + "/masks.npy")
+    else:
+        masks = np.ones([len(rgb_paths), hparams.image_wh[1], hparams.image_wh[0]])
     if hparams.style_transfer_method == 'ccpl':
         ccpl_inference_frames(result_dir, hparams.style_image, hparams)
+        Ics = None
+        print("Filtering")
+        for Ic, mask in tqdm(zip(rgb_paths, masks)):
+            Ic_mask = mask[..., None]
+            Ics = Ic.replace('.png', f"_s_{os.path.basename(hparams.style_image).split('.')[0]}.png")
+            
+            filtered_name = os.path.basename(Ics).split('.')[0].replace('_s_', '_f_')
+            
+            if hparams.use_guided_filter:
+                img = cv.imread(Ics, cv.IMREAD_UNCHANGED)
+                imgGuide = cv.imread(Ic, cv.IMREAD_UNCHANGED)  # 引导图片
+                if hparams.use_guided_filter == 1:
+                    imgFilter = cv.ximgproc.guidedFilter(imgGuide, img, 2, 1, -1)
+                elif hparams.use_guided_filter == 2:
+                    imgFilter = cv2.bilateralFilter(img, d=0, sigmaColor=100, sigmaSpace=10)
+                    
+                imgFilter = imgFilter * Ic_mask #! crop
+                imgFilter = np.concatenate((imgFilter, Ic_mask * 255), axis=2)
+                # ic(imgFilter.shape)
+                img = img * Ic_mask             #! crop
+                img = np.concatenate((img, Ic_mask * 255), axis=2)
+                # ic(img.shape)
+                cv.imwrite(os.path.join(hparams.out_dir, f'{filtered_name}.png'), imgFilter)
+                cv.imwrite(Ics, img) #! override
     else:
         if hparams.style_transfer_method == 'gayts':
             style_transfer = neural_style_transfer
@@ -412,10 +480,44 @@ if __name__ == '__main__':
             style_transfer = pama_infer_one_image
         else:
             raise NotImplementedError(f"{hparams.style_transfer_method} is not supported")
-        
-        for path in rgb_paths:
-            hparams.content_image = path #? 我为什么要写这一行
-            style_transfer(path, hparams.style_image, hparams)
+
+        Ics = None
+        for Ic, mask in tqdm(zip(rgb_paths, masks)):
+            style_transfer(Ic, hparams.style_image, hparams)
+            
+            #! read alpha as mask
+            Ic_mask = mask[..., None]
+            
+            Ics = Ic.replace('.png', f"_s_{os.path.basename(hparams.style_image).split('.')[0]}.png")
+            
+            if hparams.use_guided_filter:
+                imgGuide = cv.imread(Ic, cv.IMREAD_UNCHANGED) # 引导图片
+                # ic(imgGuide.shape)
+                
+                filtered_name = os.path.basename(Ics).split('.')[0].replace('_s_', '_f_')
+                # ic(Ic, Ics, filtered_name)
+                
+                img = cv.imread(Ics, cv.IMREAD_UNCHANGED)
+                if hparams.use_guided_filter == 1:
+                    imgFilter = cv.ximgproc.guidedFilter(imgGuide, img, 2, 1, -1)
+                elif hparams.use_guided_filter == 2:
+                    imgFilter = cv2.bilateralFilter(img, d=0, sigmaColor=100, sigmaSpace=10)
+                # ic(imgFilter.shape)
+                imgFilter = imgFilter * Ic_mask #! crop
+                imgFilter = np.concatenate((imgFilter, Ic_mask * 255), axis=2)
+                # ic(imgFilter.shape)
+                img = img * Ic_mask             #! crop
+                img = np.concatenate((img, Ic_mask * 255), axis=2)
+                # ic(img.shape)
+                cv.imwrite(os.path.join(hparams.out_dir, f'{filtered_name}.png'), imgFilter)
+                cv.imwrite(Ics, img) #! override
+            else:
+                img = cv.imread(Ics, cv.IMREAD_UNCHANGED)
+                img = img * Ic_mask             #! crop
+                img = np.concatenate((img, Ic_mask * 255), axis=2)
+                cv.imwrite(Ics, img) #! override
 
     # 保存一下NeRF渲染结果和单独风格化后结果的视频
     save_video(hparams)
+    if hparams.loop > 0:
+        save_compare_video(hparams)

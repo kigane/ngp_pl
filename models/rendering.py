@@ -3,6 +3,7 @@ from .custom_functions import \
     RayAABBIntersector, RayMarcher, VolumeRenderer
 from einops import rearrange
 import vren
+from icecream import ic
 
 MAX_SAMPLES = 1024
 NEAR_DISTANCE = 0.01
@@ -143,6 +144,7 @@ def __render_rays_train(model, rays_o, rays_d, hits_t, **kwargs):
         if isinstance(v, torch.Tensor):
             kwargs[k] = torch.repeat_interleave(v[rays_a[:, 0]], rays_a[:, 2], 0)
     sigmas, rgbs = model(xyzs, dirs, **kwargs)
+    # ic(sigmas.min(), sigmas.max(), sigmas.mean())
 
     (results['vr_samples'], results['opacity'],
     results['depth'], results['rgb'], results['ws']) = \

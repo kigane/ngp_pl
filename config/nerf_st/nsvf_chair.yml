@@ -1,0 +1,39 @@
+#-------------------------------data & model----------------------------------
+
+root_dir: data/NSVF/Synthetic_NeRF/Chair # root directory of dataset
+exp_name: NSVF_Chair_PAMA_NOGUIDE_107 #_PAMA_122     # experiment name
+ckpt_path: null
+# ckpt_path: ckpts/nsvf/NSVF_Lego_PAMA_122/epoch=4_slim.ckpt
+desc: 
+# ckpt_path: ckpts/colmap/LLFF_FERN_ST_PAMA_GF_107/epoch=4.ckpt  # show_gui
+weight_path: null
+dataset_name: nsvf              # [nerf | nsvf | colmap | nerfpp | rtmv] 
+split: train                      # [train | trainval| trainvaltest] 
+downsample: 1.0                   # downsample factor (<=1.0) for the images
+scale: 0.5                        # scene scale (whole scene must lie in [-scale, scale]^3
+L: 16 # 多尺度特征层数。原始值: 16 
+F: 2  # 每层特征维度。原始值: 2 
+log2_T: 19 # 哈希表大小。原始值: 19 
+N_min: 16 #　最低分辨率。原始值: 16 
+
+#-------------------------------training-------------------------------------
+
+batch_size: 4096                  # number of rays in a batch
+ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
+num_epochs: 5                     # number of training epochs
+lr: 2.e-2                         # learning rate
+
+#-------------------------------style transfer-------------------------------
+
+style_transfer_method: pama # [gayts(too slow) | adain | pama | ccpl]
+style_image: data/styles/107.jpg
+use_guided_filter: 0 # 0: disable, 1: guided_filter, 2:bilateral_filter
+
+content_size: # h, w
+  - 800
+  - 800
+style_size:
+  - 800
+  - 800
+
+height: 800

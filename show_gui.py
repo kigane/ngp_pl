@@ -8,6 +8,7 @@ import time
 from datasets import dataset_dict
 from datasets.ray_utils import get_ray_directions, get_rays
 from models.networks import NGP
+from models.networks2 import ModNGP
 from models.rendering import render
 from train import depth2img
 from utils import load_ckpt, parse_args
@@ -54,7 +55,10 @@ class NGPGUI:
     def __init__(self, hparams, K, img_wh, radius=2.5):
         self.hparams = hparams
         rgb_act = 'None' if self.hparams.use_exposure else 'Sigmoid'
-        self.model = NGP(scale=hparams.scale, rgb_act=rgb_act, hparams=self.hparams).cuda()
+        if hparams.use_mod_ngp:
+            self.model = ModNGP(scale=self.hparams.scale, rgb_act=rgb_act, hparams=self.hparams)
+        else:
+            self.model = NGP(scale=self.hparams.scale, rgb_act=rgb_act, hparams=self.hparams)
         load_ckpt(self.model, hparams.ckpt_path)
 
         self.cam = OrbitCamera(K, img_wh, r=radius)
@@ -77,8 +81,8 @@ class NGPGUI:
         if self.hparams.dataset_name in ['colmap', 'nerfpp']:
             exp_step_factor = 1/256
         else: exp_step_factor = 0
-
-        results = render(self.model, rays_o, rays_d,
+        #! 为什么换成ModNGP后就要加.cuda()，之前不用?
+        results = render(self.model.cuda(), rays_o, rays_d,
                          **{'test_time': True,
                             'to_cpu': True, 'to_numpy': True,
                             'T_threshold': 1e-2,

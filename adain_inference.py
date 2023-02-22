@@ -76,3 +76,22 @@ def style_transfer_one_image(path, style_image, hparams):
     output = output.cpu()
     output_name = f"{output_dir}/{os.path.basename(content_path).split('.')[0]}_s_{os.path.basename(style_path).split('.')[0]}{hparams.save_ext}"
     save_image(output, str(output_name))
+
+
+if __name__ == '__main__':
+    from utils import parse_args
+    hparams = parse_args()
+    content_lst = [
+        'results/001.png',
+        'results/001_s_122.jpg',
+        'results/001_s_122_s_122.jpg',
+        'results/001_s_122_s_122_s_122.jpg',
+        'results/001_s_122_s_122_s_122_s_122.jpg']
+    # hparams.content = 'results/001.png'
+    hparams.style = 'data/styles/122.jpg'
+    hparams.out_dir = 'results'
+    hparams.save_ext = '.jpg'
+    hparams.image_wh = (800, 600)
+    for c in content_lst:
+        hparams.content = c
+        style_transfer_one_image(hparams.content, hparams.style, hparams)

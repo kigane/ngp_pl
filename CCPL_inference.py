@@ -62,7 +62,7 @@ def ccpl_inference_frames(path, style_image, hparams):
     decoder.eval()
     vgg.eval()
 
-    decoder.load_state_dict(torch.load(hparams.decoder))
+    decoder.load_state_dict(torch.load(hparams.ccpl_decoder))
     vgg.load_state_dict(torch.load(hparams.vgg))
     SCT.load_state_dict(torch.load(hparams.SCT))
     decoder = decoder if hparams.testing_mode == 'art' else nn.Sequential(*list(net.decoder.children())[10:])

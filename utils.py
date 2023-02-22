@@ -80,6 +80,8 @@ def parse_args():
                         default=-1, help='number of loop(nerf->style_transfer)')
     parser.add_argument('--style_image', type=str, help='the style image')
     parser.add_argument('--exp_name', type=str, help='exp name')
+    parser.add_argument('--use_guided_filter', type=int, help='use image guided filter')
+    parser.add_argument('--style_transfer_method', type=str, help='style transfer method')
     return check_args(parser.parse_args())
 
 
@@ -171,17 +173,84 @@ def save_video(hparams):
     ret_dir = f'results/{hparams.dataset_name}/{hparams.exp_name}/{hparams.loop}'
     all_imgs = glob(ret_dir + "/*")
     # _d. 为深度图。 _s_ 为风格迁移后的图。 pose.npy为保存的相应的位姿。
-    nerf_render_rets = sorted([img for img in all_imgs if ('_d.' not in img) and ('_s_' not in img) and ('poses' not in img)])
+    nerf_render_rets = sorted([img for img in all_imgs if ('_d.' not in img) and ('_s_' not in img) and ('_f_' not in img) and ('poses' not in img)])
+    depth_rets = sorted([img for img in all_imgs if '_d.' in img])
     stylized_rets = sorted([img for img in all_imgs if '_s_' in img])
+    if hparams.use_guided_filter != 0:
+        filtered_rets = sorted([img for img in all_imgs if '_f_' in img])
     combined = []
-    for n, s in zip(nerf_render_rets, stylized_rets):
-        nerf_img = imageio.imread(n)
-        stylized_img = imageio.imread(s)
-        # (h, w, c)
-        combined.append(np.concatenate([nerf_img, stylized_img], axis=1))
-    # imageio.mimsave(os.path.join(save_dir, f'{hparams.loop}.mp4'), [imageio.imread(img) for img in nerf_render_rets], fps=24, macro_block_size=1)
+    
+    w, h = hparams.image_wh
+    alpha = np.ones([h, w, 1], dtype=np.uint8)*255
+    # alpha = np.ones([h, w, 1], dtype=np.uint8)*255
+    if hparams.use_guided_filter != 0:
+        for n, d, s, f in zip(nerf_render_rets, depth_rets, stylized_rets, filtered_rets):
+            nerf_img = imageio.imread(n)
+            nerf_img = np.concatenate((nerf_img,alpha) , axis=2)
+            depth_img = imageio.imread(d)
+            depth_img = np.concatenate((depth_img, alpha), axis=2)
+            stylized_img = imageio.imread(s)
+            filtered_img = imageio.imread(f)
+            # (h, w, c)
+            top = np.concatenate([nerf_img, depth_img], axis=1)
+            bot = np.concatenate([stylized_img, filtered_img], axis=1)
+            combined.append(np.concatenate([top, bot], axis=0))
+    else:
+        for n, d, s in zip(nerf_render_rets, depth_rets, stylized_rets):
+            nerf_img = imageio.imread(n)
+            nerf_img = np.concatenate((nerf_img,alpha) , axis=2)
+            depth_img = imageio.imread(d)
+            depth_img = np.concatenate((depth_img, alpha), axis=2)
+            stylized_img = imageio.imread(s)
+            # (h, w, c)
+            combined.append(np.concatenate([nerf_img, stylized_img, depth_img], axis=1))
+    # imageio.mimsave(os.path.join(save_dir, f'n_{hparams.loop}.mp4'), [imageio.imread(img) for img in nerf_render_rets], fps=24, macro_block_size=1)
+    # imageio.mimsave(os.path.join(save_dir, f'd_{hparams.loop}.mp4'), [imageio.imread(img) for img in depth_rets], fps=24, macro_block_size=1)
     # imageio.mimsave(os.path.join(save_dir, f's_{hparams.loop}.mp4'), [imageio.imread(img) for img in stylized_rets], fps=24, macro_block_size=1)
     imageio.mimsave(os.path.join(save_dir, f'combined_{hparams.loop}.mp4'), combined, fps=hparams.fps, macro_block_size=1)
+
+def save_compare_video(hparams):
+    save_dir = f'results/{hparams.dataset_name}/{hparams.exp_name}/videos'
+    check_folder(save_dir)
+    ret_dir = f'results/{hparams.dataset_name}/{hparams.exp_name}/{hparams.loop}'
+    ret_dir2 = f'results/{hparams.dataset_name}/{hparams.exp_name}/{int(hparams.loop)-1}'
+    all_imgs_curr_loop = glob(ret_dir + "/*")
+    all_imgs_prev_loop = glob(ret_dir2 + "/*")
+    # _d. 为深度图。 _s_ 为风格迁移后的图。 pose.npy为保存的相应的位姿。
+    nerf_render_rets_prev = sorted([img for img in all_imgs_prev_loop if ('_d.' not in img) and ('_s_' not in img) and ('_f_' not in img) and ('poses' not in img)])
+    nerf_render_rets_curr = sorted([img for img in all_imgs_curr_loop if ('_d.' not in img) and ('_s_' not in img) and ('_f_' not in img) and ('poses' not in img)])
+    stylized_rets = sorted([img for img in all_imgs_prev_loop if '_s_' in img])
+    filtered_rets = sorted([img for img in all_imgs_prev_loop if '_f_' in img])
+    combined = []
+    
+    w, h = hparams.image_wh
+    alpha = np.ones([h, w, 1], dtype=np.uint8)*255
+    if filtered_rets:
+        for n, s, f, nn in zip(nerf_render_rets_prev, stylized_rets, filtered_rets, nerf_render_rets_curr):
+            nerf_img = imageio.imread(n)
+            nerf_img = np.concatenate((nerf_img, alpha), axis=2)
+            stylized_img = imageio.imread(s)
+            filtered_img = imageio.imread(f)
+            nerf_img_curr = imageio.imread(nn)
+            nerf_img_curr = np.concatenate((nerf_img_curr, alpha), axis=2)
+            # (h, w, c)
+            # combined.append(np.concatenate([nerf_img, stylized_img, filtered_img, nerf_img_curr], axis=1))
+            top = np.concatenate([nerf_img, stylized_img], axis=1)
+            bot = np.concatenate([filtered_img, nerf_img_curr], axis=1)
+            combined.append(np.concatenate([top, bot], axis=0))
+    else:
+        for n, s, nn in zip(nerf_render_rets_prev, stylized_rets,  nerf_render_rets_curr):
+            nerf_img = imageio.imread(n)
+            nerf_img = np.concatenate((nerf_img, alpha), axis=2)
+            stylized_img = imageio.imread(s)
+            nerf_img_curr = imageio.imread(nn)
+            nerf_img_curr = np.concatenate((nerf_img_curr, alpha), axis=2)
+            # (h, w, c)
+            # combined.append(np.concatenate([nerf_img, stylized_img, filtered_img, nerf_img_curr], axis=1))
+            combined.append(np.concatenate([nerf_img, stylized_img, nerf_img_curr], axis=1))
+    # imageio.mimsave(os.path.join(save_dir, f'{hparams.loop}.mp4'), [imageio.imread(img) for img in nerf_render_rets], fps=24, macro_block_size=1)
+    # imageio.mimsave(os.path.join(save_dir, f's_{hparams.loop}.mp4'), [imageio.imread(img) for img in stylized_rets], fps=24, macro_block_size=1)
+    imageio.mimsave(os.path.join(save_dir, f'nerfp_stylizedp_filteredp_nerfc_{hparams.loop}.mp4'), combined, fps=hparams.fps, macro_block_size=1)
 
 
 def numpy2cv2(cont,style,prop,width,height):

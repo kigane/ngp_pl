@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import json
+import glob
+from PIL import Image
 
 from .base import BaseDataset
 from .ray_utils import *
@@ -37,6 +39,15 @@ class StylizedDataest(BaseDataset):
             self.K = torch.FloatTensor(K)
             self.directions = get_ray_directions(h, w, self.K)
             self.img_wh = (w, h)
+        elif self.dataset_name == 'nerfpp':
+            K = np.loadtxt(glob.glob(os.path.join(self.root_dir, 'train/intrinsics/*.txt'))[0],
+                       dtype=np.float32).reshape(4, 4)[:3, :3]
+            K[:2] *= self.downsample
+            w, h = Image.open(glob.glob(os.path.join(self.root_dir, 'train/rgb/*'))[0]).size
+            w, h = int(w*self.downsample), int(h*self.downsample)
+            self.K = torch.FloatTensor(K)
+            self.directions = get_ray_directions(h, w, self.K)
+            self.img_wh = (w, h)
         elif self.dataset_name == 'colmap':
             # Step 1: read and scale intrinsics (same for all images)
             camdata = read_cameras_binary(os.path.join(self.root_dir, 'sparse/0/cameras.bin'))
@@ -59,11 +70,39 @@ class StylizedDataest(BaseDataset):
                                         [0, fy, cy],
                                         [0,  0,  1]])
             self.directions = get_ray_directions(h, w, self.K)
+        elif self.dataset_name == 'nsvf':
+            if 'Synthetic' in self.root_dir or 'Ignatius' in self.root_dir:
+                with open(os.path.join(self.root_dir, 'intrinsics.txt')) as f:
+                    fx = fy = float(f.readline().split()[0]) * self.downsample
+                if 'Synthetic' in self.root_dir:
+                    w = h = int(800*self.downsample)
+                else:
+                    w, h = int(1920*self.downsample), int(1080*self.downsample)
+
+                K = np.float32([[fx, 0, w/2],
+                                [0, fy, h/2],
+                                [0,  0,   1]])
+            else:
+                K = np.loadtxt(os.path.join(self.root_dir, 'intrinsics.txt'),
+                            dtype=np.float32)[:3, :3]
+                if 'BlendedMVS' in self.root_dir:
+                    w, h = int(768*self.downsample), int(576*self.downsample)
+                elif 'Tanks' in self.root_dir:
+                    w, h = int(1920*self.downsample), int(1080*self.downsample)
+                K[:2] *= self.downsample
+
+            self.K = torch.FloatTensor(K)
+            self.directions = get_ray_directions(h, w, self.K)
+            self.img_wh = (w, h)
         else:
             raise NotImplementedError(f'Unsupported dataset_name {self.dataset_name}')
 
     def read_meta(self, split, **kwargs):
-        img_paths = [os.path.join(self.imgs_dir, name) for name in sorted(os.listdir(os.path.join(self.imgs_dir))) if '_s_' in name]
+        if kwargs.get('use_guided_filter', False):
+            sflag = '_f_'
+        else:
+            sflag = '_s_'
+        img_paths = [os.path.join(self.imgs_dir, name) for name in sorted(os.listdir(os.path.join(self.imgs_dir))) if sflag in name]
         # 添加相应深度图
         poses = np.load(os.path.join(self.imgs_dir, 'poses.npy'))
         depths = np.load(os.path.join(os.path.dirname(self.imgs_dir), 'depths.npy'))
@@ -81,7 +120,8 @@ class StylizedDataest(BaseDataset):
         
         print(f'Loading {len(img_paths)} {split} images ...')
         for img_path in tqdm(img_paths):
-            img = read_image(img_path, self.img_wh, blend_a=False)
+            #! blend_a False => True, while apply mask
+            img = read_image(img_path, self.img_wh)
             img = torch.FloatTensor(img)
             self.rays += [img]
         

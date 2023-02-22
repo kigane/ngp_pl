@@ -9,7 +9,7 @@ import numpy as np
 from .rendering import NEAR_DISTANCE
 
 
-class NGP(nn.Module):
+class ModNGP(nn.Module):
     def __init__(self, scale, rgb_act='Sigmoid', hparams=None):
         super().__init__()
 
@@ -59,36 +59,17 @@ class NGP(nn.Module):
                 }
             )
         
-        # self.xyz_encoding = tcnn.Encoding(
-        #     n_input_dims=3,
-        #     encoding_config={
-        #         "otype": "Grid",
-        #         "type": "Hash",
-        #         "n_levels": L,
-        #         "n_features_per_level": F,
-        #         "log2_hashmap_size": log2_T,
-        #         "base_resolution": N_min,
-        #         "per_level_scale": b,
-        #         "interpolation": "Linear"
-        #     }
-        # )
-        
-        # self.xyz_network = tcnn.Network(
-        #     n_input_dims=self.xyz_encoding.n_output_dims, 
-        #     n_output_dims=16,
-        #     network_config={
-        #         "otype": "FullyFusedMLP",
-        #         "activation": "ReLU",
-        #         "output_activation": "None",
-        #         "n_neurons": 64,
-        #         "n_hidden_layers": 1,
-        #     }
-        # )
-        
-        # self.xyz_encoder = nn.Sequential(
-        #     self.xyz_encoding,
-        #     self.xyz_network
-        # )
+        self.density_net = \
+            tcnn.Network(
+                n_input_dims=16, n_output_dims=1,
+                network_config={
+                    "otype": "FullyFusedMLP",
+                    "activation": "ReLU",
+                    "output_activation": "None",
+                    "n_neurons": 64,
+                    "n_hidden_layers": 1,
+                }
+            )
 
         self.dir_encoder = \
             tcnn.Encoding(
@@ -137,8 +118,8 @@ class NGP(nn.Module):
         """
         x = (x-self.xyz_min)/(self.xyz_max-self.xyz_min)
         h = self.xyz_encoder(x)
-        # sigma = exp{x} 取16维output的第一维
-        sigmas = TruncExp.apply(h[:, 0]) 
+        # sigmas = self.density_net(h).squeeze().float()
+        sigmas = TruncExp.apply(self.density_net(h).squeeze()) 
         if return_feat: return sigmas, h
         return sigmas
 
@@ -176,7 +157,6 @@ class NGP(nn.Module):
             rgbs: (N, 3)
         """
         sigmas, h = self.density(x, return_feat=True)
-        # ic(sigmas.min(), sigmas.max())
         d = d/torch.norm(d, dim=1, keepdim=True)
         d = self.dir_encoder((d+1)/2)
         rgbs = self.rgb_net(torch.cat([d, h], 1))
@@ -310,6 +290,5 @@ class NGP(nn.Module):
     def fix_xyz_encoder(self):
         for params in self.xyz_encoder.parameters():
             params.requires_grad = False
-        # 只固定编码器
-        # for params in self.xyz_encoder[0].parameters():
-        #     params.requires_grad = False
+        for params in self.density_net.parameters():
+            params.requires_grad = False
