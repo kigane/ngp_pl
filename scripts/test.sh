@@ -1,3 +1,4 @@
+#!/bin/bash  
 timer_start=`date "+%Y-%m-%d %H:%M:%S"`
 sleep 2s
 timer_end=`date "+%Y-%m-%d %H:%M:%S"`
@@ -7,8 +8,15 @@ a="hello"
 style="data/styles/$a.jpg"
 
 echo "开始： $timer_start"
-a="world"
+a="world" # 以最初的赋值为准
 echo $style
 echo $style
+
+for((i=1;i<=10;i++));  
+do   
+echo $i
+echo $i hello
+done  
+
 echo "结束： $timer_end"
 echo "耗时： $duration"

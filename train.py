@@ -17,6 +17,7 @@ from gayts import neural_style_transfer
 from adain_inference import style_transfer_one_image
 from pama_inference import pama_infer_one_image
 from CCPL_inference import ccpl_inference_frames
+from nnst_inference import nnst_infer_one_image
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
 from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
@@ -478,6 +479,8 @@ if __name__ == '__main__':
             style_transfer = style_transfer_one_image
         elif hparams.style_transfer_method == 'pama':
             style_transfer = pama_infer_one_image
+        elif hparams.style_transfer_method == 'nnst':
+            style_transfer = nnst_infer_one_image
         else:
             raise NotImplementedError(f"{hparams.style_transfer_method} is not supported")
 

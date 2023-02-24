@@ -11,8 +11,8 @@ num_epochs: 5                     # number of training epochs
 lr: 1.e-2                         # learning rate              
 weight_path: null
 fps: 10 # result video fps
-use_depth_loss: False
-
+use_depth_loss: True
+# use_guided_filter: 1
 #-------------------------------style transfer-------------------------------
 
 style_transfer_method: pama # [gayts(too slow) | adain | pama | ccpl]

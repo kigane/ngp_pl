@@ -119,28 +119,20 @@ if __name__ == '__main__':
     from utils import parse_args
     hparams = parse_args()
     # hparams.content = 'results/001.png'
-    hparams.style = 'data/styles/122.jpg'
-    hparams.out_dir = 'results'
-    hparams.save_ext = '.jpg'
-    hparams.image_wh = (800, 600)
+    # hparams.style = 'data/styles/122.jpg'
+    # hparams.out_dir = 'results'
+    # hparams.save_ext = '.jpg'
+    # hparams.image_wh = (800, 600)
     # hparams.content = "results/001.png"
-    hparams.content = "results/001_s_12202jpg_lbfgs.jpg"
-    optimizer = 'adam' # adma
+    # hparams.content = "results/001_s_12202jpg_lbfgs.jpg"
+    # optimizer = 'adam' # adma
     
     contents = [
-        "results/001.png",
-        f"results/001_s_12201_{optimizer}.jpg",
-        f"results/001_s_12202_{optimizer}.jpg",
-        f"results/001_s_12203_{optimizer}.jpg",
-        f"results/001_s_12204_{optimizer}.jpg",
+        "data/nerf_llff_data/trex/images/DJI_20200223_163553_010.jpg",
     ]
     
     style_images = [ # this only related to output filename
-        'data/styles/12201.jpg',
-        'data/styles/12202.jpg',
-        'data/styles/12203.jpg',
-        'data/styles/12204.jpg',
-        'data/styles/12205.jpg'
+        'data/styles/6.jpg',
     ]
     
     for c, s in tqdm(zip(contents, style_images)):
@@ -148,4 +140,4 @@ if __name__ == '__main__':
         hparams.content = c
         # use this parameter to modify output filename 
         hparams.style_image = s
-        neural_style_transfer(hparams.content, hparams.style, hparams)
+        neural_style_transfer(hparams.content, hparams.style_image, hparams)

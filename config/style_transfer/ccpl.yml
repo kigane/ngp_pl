@@ -1,5 +1,5 @@
 content_dir: data/frames # path to video frames
-style_path: data/styles/14.jpg # the style source
+style_path: data/styles/6.jpg # the style source
 testing_mode: art # Artistic or Photo-realistic                    
 vgg: data/pretrained/ccpl/vgg_normalised.pth
 decoder: data/pretrained/ccpl/decoder_iter_160000.pth.tar # decoder to load

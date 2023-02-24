@@ -5,6 +5,7 @@ from torchvision.utils import save_image
 from PIL import Image, ImageFile
 from utils import parse_args
 from models.pama_net import PAMANet
+from models.pama_net_new import PAMANET
 from icecream import ic
 from utils import test_transform
 import cv2 as cv
@@ -17,7 +18,11 @@ ic.configureOutput(prefix=lambda: datetime.now().strftime('%y-%m-%d %H:%M:%S | '
 def pama_infer_one_image(content, style, hparams):
     DEVICE = 'cuda'
     
-    model = PAMANet(hparams)
+    # ic(hparams.checkpoints)
+    if(hparams.checkpoints.endswith('new')):
+        model = PAMANET(hparams)
+    else:
+        model = PAMANet(hparams)
     model.eval()
     model.to(DEVICE)
     
@@ -49,7 +54,7 @@ def pama_infer_one_image(content, style, hparams):
         
 if __name__ == '__main__':
     hparams = parse_args()
-    hparams.out_dir = 'results'
+    hparams.out_dir = 'results/pama'
     hparams.save_ext = '.jpg'
     hparams.image_wh = (800, 600)
     pama_infer_one_image(hparams.content, hparams.style, hparams)

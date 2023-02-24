@@ -40,8 +40,10 @@ def save_video(name, img_paths):
     
 
 def test_img_guided_filter():
-    img = cv2.imread("results/colmap/LLFF_FLOWER_ST_PAMA_L1_14/0/000_s_14.jpg", flags=1)
-    imgGuide = cv2.imread("results/colmap/LLFF_FLOWER_ST_PAMA_L1_14/0/000.png", flags=1)  # 引导图片
+    img = cv2.imread("results/golden_gate_s_6.jpg", flags=1)
+    imgGuide = cv2.imread("data/golden_gate.jpg", flags=1)  # 引导图片
+    ic(img.shape)
+    imgGuide = cv2.resize(imgGuide, [img.shape[1], img.shape[0]])
 
     imgBiFilter = cv2.bilateralFilter(img, d=0, sigmaColor=50, sigmaSpace=10)
     imgGuidedFilter = cv2.ximgproc.guidedFilter(imgGuide, img, 3, 0.1, -1)
@@ -94,14 +96,15 @@ if __name__ == '__main__':
     # plt.tight_layout()
     # plt.show()   
     
-    hparams = Namespace()
-    hparams.dataset_name = 'nsvf'
-    hparams.exp_name = 'NSVF_Lego_PAMA_DEPTH_14'
-    hparams.loop = 3
-    hparams.use_guided_filter = 1
-    hparams.fps = 8
-    hparams.image_wh = (800, 800)
-    utils.save_video(hparams)
+    # hparams = Namespace()
+    # hparams.dataset_name = 'nsvf'
+    # hparams.exp_name = 'NSVF_Lego_PAMA_DEPTH_14'
+    # hparams.loop = 3
+    # hparams.use_guided_filter = 1
+    # hparams.fps = 8
+    # hparams.image_wh = (800, 800)
+    # utils.save_video(hparams)
     # utils.save_compare_video(hparams)
     
+    test_img_guided_filter()
     print('\033[32m#################################################\033[0m')

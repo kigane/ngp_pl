@@ -219,9 +219,11 @@ if __name__ == '__main__':
     
     bsize = 5
     img1_batch = Ic[0:bsize]
-    img2_batch = Ic[1:bsize+1]
     simg1_batch = Is[0:bsize]
+    img2_batch = Ic[1:bsize+1]
     simg2_batch = Is[1:bsize+1]
+    # img2_batch = Ic[7:bsize+7]
+    # simg2_batch = Is[7:bsize+7]
     # errs = temporal_warp_error(img1_batch, img2_batch)
     errs = style_warp_error(img1_batch, img2_batch, simg1_batch, simg2_batch)
     ic(errs, errs.mean())

@@ -1,5 +1,7 @@
-content_image: results/nerf/LEGO/raw/001.png
-style_image: data/styles/122.jpg
+# content_image: results/nerf/LEGO/raw/001.png
+# content_image: data/nerf_llff_data/trex/images/DJI_20200223_163553_010.jpg
+content_image: data/golden_gate.jpg
+style_image: data/styles/6.jpg
 height: 800
 init_method: content
 vgg_ckpt_path: data/pretrained/adain/vgg_normalised.pth

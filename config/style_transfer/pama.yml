@@ -1,11 +1,15 @@
-# [original | PAMA_1.5_color | PAMA_1.5_content | PAMA_without_color]
-checkpoints: data/pretrained/pama/original 
+# [original | PAMA_1.5_color | PAMA_1.5_content | PAMA_without_color | new]
+checkpoints: data/pretrained/pama/new
 # content: data/lego/train/r_1.png # content image  or content dir if run_folder is True
 # style: data/styles/8.jpg # style image or style dir if run_folder is True
 # content: results/colmap/LLFF_FLOWER_ST_PAMA_DEPTH_5/0/001.png 
 # content: results/colmap/LLFF_FLOWER_RAW/raw/000.png
-content: results/000_s_122_s_122_s_122_s_122.jpg
-style: data/styles/122.jpg
+# content: data/lego/train/r_3.png
+# content: data/colmap/lego/images/0_00002.png
+# content: data/nerf_llff_data/trex/images/DJI_20200223_163553_010.jpg
+content: data/golden_gate.jpg
+# content: data/lion.jpg
+style: data/styles/8.jpg
 
 training: False
 pretrained: True

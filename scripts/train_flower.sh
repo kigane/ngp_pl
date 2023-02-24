@@ -1,11 +1,23 @@
 #!/bin/bash
 timer_start=`date "+%Y-%m-%d %H:%M:%S"`
 
-python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/122.jpg --exp_name LLFF_FLOWER_ST_PAMA_122
-python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/122.jpg --exp_name LLFF_FLOWER_ST_PAMA_122
-python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/122.jpg --exp_name LLFF_FLOWER_ST_PAMA_122
-python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/122.jpg --exp_name LLFF_FLOWER_ST_PAMA_122
-python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/122.jpg --exp_name LLFF_FLOWER_ST_PAMA_122
+python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/14.jpg --exp_name LLFF_FLOWER_ST_NNST_14
+python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/14.jpg --exp_name LLFF_FLOWER_ST_NNST_14
+python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/14.jpg --exp_name LLFF_FLOWER_ST_NNST_14
+python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/14.jpg --exp_name LLFF_FLOWER_ST_NNST_14
+python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/14.jpg --exp_name LLFF_FLOWER_ST_NNST_14
+
+python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_NNST_8
+python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_NNST_8
+python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_NNST_8
+python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_NNST_8
+python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_NNST_8
+
+python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/89.jpg --exp_name LLFF_FLOWER_ST_NNST_89
+python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/89.jpg --exp_name LLFF_FLOWER_ST_NNST_89
+python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/89.jpg --exp_name LLFF_FLOWER_ST_NNST_89
+python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/89.jpg --exp_name LLFF_FLOWER_ST_NNST_89
+python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/89.jpg --exp_name LLFF_FLOWER_ST_NNST_89
 
 timer_end=`date "+%Y-%m-%d %H:%M:%S"`
 

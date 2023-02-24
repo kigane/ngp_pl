@@ -119,7 +119,7 @@ class ModNGP(nn.Module):
         x = (x-self.xyz_min)/(self.xyz_max-self.xyz_min)
         h = self.xyz_encoder(x)
         # sigmas = self.density_net(h).squeeze().float()
-        sigmas = TruncExp.apply(self.density_net(h).squeeze()) 
+        sigmas = TruncExp.apply(self.density_net(h).squeeze())
         if return_feat: return sigmas, h
         return sigmas
 

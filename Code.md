@@ -23,3 +23,5 @@ python train.py --config config/nerf_st/nsvf_drum.yml --loop 0 $use_filter $styl
 python train.py --config config/nerf_st/nsvf_drum.yml --loop 1 $use_filter $style $exp_drum0
 python train.py --config config/nerf_st/nsvf_drum.yml --loop 2 $use_filter $style $exp_drum0
 python train.py --config config/nerf_st/nsvf_drum.yml --loop 3 $use_filter $style $exp_drum0
+
+test时使用相同的配置文件，只有ckpt_path需要改为训练好的模型。

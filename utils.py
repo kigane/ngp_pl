@@ -79,6 +79,8 @@ def parse_args():
     parser.add_argument('--loop', type=int,
                         default=-1, help='number of loop(nerf->style_transfer)')
     parser.add_argument('--style_image', type=str, help='the style image')
+    parser.add_argument('--content', type=str, help='the content image') #TODO delete
+    parser.add_argument('--style', type=str, help='the content image') #TODO delete
     parser.add_argument('--exp_name', type=str, help='exp name')
     parser.add_argument('--use_guided_filter', type=int, help='use image guided filter')
     parser.add_argument('--style_transfer_method', type=str, help='style transfer method')
