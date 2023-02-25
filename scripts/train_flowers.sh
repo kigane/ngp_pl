@@ -4,44 +4,45 @@ timer_start=`date "+%Y-%m-%d %H:%M:%S"`
 
 style_idx="17"
 style="--style_image data/styles/$style_idx.jpg"
-method="--style_transfer_method pama"
+method="--style_transfer_method nnst"
 use_filter="--use_guided_filter 1"
+config="--config config/nerf_st/flower.yml"
 
-python train.py --config config/nerf_st/flower.yml --loop 0
-python train.py --config config/nerf_st/flower.yml --loop 1
-python train.py --config config/nerf_st/flower.yml --loop 2
-python train.py --config config/nerf_st/flower.yml --loop 3
-python train.py --config config/nerf_st/flower.yml --loop 4
+python train.py $config --loop 0
+python train.py $config --loop 1
+python train.py $config --loop 2
+python train.py $config --loop 3
+python train.py $config --loop 4
 
-python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
-python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
-python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
-python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
-python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
+python train.py $config --loop 0 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
+python train.py $config --loop 1 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
+python train.py $config --loop 2 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
+python train.py $config --loop 3 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
+python train.py $config --loop 4 --style_image data/styles/20.jpg --exp_name LLFF_FLOWER_ST_PAMA_20
 
-python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
-python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
-python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
-python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
-python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
+python train.py $config --loop 0 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
+python train.py $config --loop 1 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
+python train.py $config --loop 2 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
+python train.py $config --loop 3 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
+python train.py $config --loop 4 --style_image data/styles/130.jpg --exp_name LLFF_FLOWER_ST_PAMA_130
 
-python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
-python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
-python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
-python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
-python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
+python train.py $config --loop 0 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
+python train.py $config --loop 1 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
+python train.py $config --loop 2 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
+python train.py $config --loop 3 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
+python train.py $config --loop 4 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_ST_PAMA_8
 
-python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
-python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
-python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
-python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
-python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
+python train.py $config --loop 0 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
+python train.py $config --loop 1 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
+python train.py $config --loop 2 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
+python train.py $config --loop 3 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
+python train.py $config --loop 4 --style_image data/styles/19.jpg --exp_name LLFF_FLOWER_ST_PAMA_19
 
-python train.py --config config/nerf_st/flower.yml --loop 0 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
-python train.py --config config/nerf_st/flower.yml --loop 1 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
-python train.py --config config/nerf_st/flower.yml --loop 2 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
-python train.py --config config/nerf_st/flower.yml --loop 3 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
-python train.py --config config/nerf_st/flower.yml --loop 4 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
+python train.py $config --loop 0 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
+python train.py $config --loop 1 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
+python train.py $config --loop 2 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
+python train.py $config --loop 3 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
+python train.py $config --loop 4 --style_image data/styles/17.jpg --exp_name LLFF_FLOWER_ST_PAMA_17
 
 timer_end=`date "+%Y-%m-%d %H:%M:%S"`
 

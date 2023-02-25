@@ -16,12 +16,12 @@ use_l1_loss: False
 use_depth_loss: True
 use_mod_ngp: False
 weight_path: null
+fix_encoder: False
 
 eval_lpips: False                 # evaluate lpips metric (consumes more VRAM)
 val_only: False                   # run only validation (need to provide ckpt_path)
 no_save_test: False               # whether to save test image and video
 fps: 5 # result video fps
-fix_encoder: False
 
 vgg_pretrained: data/pretrained/adain/vgg_normalised.pth
 decoder_pretrained: data/pretrained/adain/decoder.pth

@@ -18,7 +18,7 @@ N_min: 16 #　最低分辨率。原始值: 16
 
 #-------------------------------training-------------------------------------
 
-batch_size: 4096                  # number of rays in a batch
+batch_size: 8192                  # number of rays in a batch
 ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
 num_epochs: 5                     # number of training epochs
 lr: 2.e-2                         # learning rate

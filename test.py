@@ -106,5 +106,7 @@ if __name__ == '__main__':
     # utils.save_video(hparams)
     # utils.save_compare_video(hparams)
     
-    test_img_guided_filter()
+    # test_img_guided_filter()
+    for i in range(0, 34, 5):
+        print(i)
     print('\033[32m#################################################\033[0m')

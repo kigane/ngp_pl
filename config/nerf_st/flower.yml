@@ -3,8 +3,8 @@
 root_dir: data/nerf_llff_data/flower # root directory of dataset
 exp_name: LLFF_FLOWER_ST_pama_73     # experiment name
 ckpt_path: null
-desc: pama
-# ckpt_path: ckpts/colmap/LLFF_FERN_ST_PAMA_GF_14/epoch=4.ckpt  # show_gui
+desc: Use NNST with depth loss and fix encoder
+# ckpt_path: ckpts/colmap/LLFF_FLOWER_ST_NNST_8/epoch=7_slim.ckpt  # show_gui
 weight_path: null
 dataset_name: colmap              # [nerf | nsvf | colmap | nerfpp | rtmv] 
 split: train                      # [train | trainval| trainvaltest] 
@@ -21,6 +21,7 @@ N_min: 16 #　最低分辨率。原始值: 16
 use_l1_loss: False
 use_depth_loss: True
 use_mod_ngp: False
+fix_encoder: True
 
 #-------------------------------training-------------------------------------
 

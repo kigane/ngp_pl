@@ -171,7 +171,7 @@ class NeRFSystem(LightningModule):
             load_ckpt(self.model, self.hparams.weight_path)
         
         #! 固定density net
-        if hparams.loop > 0 and hparams.fix_encoder:
+        if hparams.loop > 1 and hparams.fix_encoder:
             self.model.fix_xyz_encoder()
 
         net_params = []

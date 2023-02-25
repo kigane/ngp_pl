@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torchvision.models.optical_flow import Raft_Large_Weights, raft_large
+from torchvision.models.optical_flow import Raft_Large_Weights, Raft_Small_Weights, raft_large, raft_small
 from einops import rearrange, repeat
 import warnings
 
@@ -165,9 +165,11 @@ def style_warp_error(img1, img2, simg1, simg2):
     img2: (N,C,H,W) [-1,1]
     model: RAFT
     """
-    weights = Raft_Large_Weights.C_T_SKHT_K_V2
+    # weights = Raft_Large_Weights.C_T_SKHT_K_V2
+    weights = Raft_Small_Weights.C_T_V2
     # 加载RAFT模型
-    model = raft_large(weights=weights, progress=False).to(device)
+    # model = raft_large(weights=weights, progress=False).to(device)
+    model = raft_small(weights=weights, progress=False).to(device)
     model = model.eval()
     img1 = img1.to(device)
     img2 = img2.to(device)
@@ -200,16 +202,16 @@ if __name__ == '__main__':
         tf.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     ])
     
-    dir = "results/colmap/LLFF_FLOWER_ST_ADAIN_GF1_14/0"
+    dir = "results/colmap/LLFF_FLOWER_ST_NNST_8/0"
     imgs = glob(dir + "/*")
     contents = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im and '_f_' not in im])
     Ic = [img_tf(Image.open(c).convert('RGB')) for c in contents]
     Ic = torch.stack(Ic)
     
-    dir = "results/colmap/LLFF_FLOWER_ST_ADAIN_GF1_14/1"
+    dir = "results/colmap/LLFF_FLOWER_ST_NNST_8/1"
     imgs = glob(dir + "/*")
     # stylized = sorted([im for im in imgs if '_s_' in im])
-    stylized = sorted([im for im in imgs if '_f_' in im])
+    stylized = sorted([im for im in imgs if '_s_' in im])
     # stylized = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im and '_f_' not in im])
     # stylized = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im])
     Is = [img_tf(Image.open(s).convert('RGB')) for s in stylized]
@@ -217,14 +219,17 @@ if __name__ == '__main__':
     
     ic(Ic.shape, Is.shape)
     
-    bsize = 5
-    img1_batch = Ic[0:bsize]
-    simg1_batch = Is[0:bsize]
-    img2_batch = Ic[1:bsize+1]
-    simg2_batch = Is[1:bsize+1]
-    # img2_batch = Ic[7:bsize+7]
-    # simg2_batch = Is[7:bsize+7]
-    # errs = temporal_warp_error(img1_batch, img2_batch)
-    errs = style_warp_error(img1_batch, img2_batch, simg1_batch, simg2_batch)
-    ic(errs, errs.mean())
+    bsize = 1
+    all_errs = []
+    range_size = 1
+    for i in range(0, len(Ic)-range_size):
+        img1_batch = Ic[i:i+bsize]
+        simg1_batch = Is[i:i+bsize]
+        img2_batch = Ic[i+range_size:bsize+i+range_size]
+        simg2_batch = Is[i+range_size:bsize+i+range_size]
+        # errs = temporal_warp_error(img1_batch, img2_batch)
+        errs = style_warp_error(img1_batch, img2_batch, simg1_batch, simg2_batch)
+        all_errs.extend(errs)
+        ic(errs, errs.mean())
+    ic(sum(all_errs)/len(all_errs))
     

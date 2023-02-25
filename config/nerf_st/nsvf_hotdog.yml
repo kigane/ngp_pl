@@ -1,7 +1,7 @@
 #-------------------------------data & model----------------------------------
 
 root_dir: data/NSVF/Synthetic_NeRF/Hotdog # root directory of dataset
-exp_name: NSVF_Hotdog_PAMA_DEPTH_NOGUIDE_86 #_PAMA_122     # experiment name
+exp_name: NSVF_HOTDOG_86 #_PAMA_122     # experiment name
 ckpt_path: null
 # ckpt_path: ckpts/nsvf/NSVF_Hotdog_PAMA_122/epoch=4_slim.ckpt
 desc: use mask
@@ -18,7 +18,7 @@ N_min: 16 #　最低分辨率。原始值: 16
 
 #-------------------------------training-------------------------------------
 
-batch_size: 4096                  # number of rays in a batch
+batch_size: 8192                  # number of rays in a batch
 ray_sampling_strategy: all_images # [all_images | same_image] sample pixels in one image or all images
 num_epochs: 5                     # number of training epochs
 lr: 2.e-2                         # learning rate
