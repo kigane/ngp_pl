@@ -3,7 +3,7 @@
 root_dir: data/nerf_llff_data/flower # root directory of dataset
 exp_name: LLFF_FLOWER_ST_pama_73     # experiment name
 ckpt_path: null
-desc: Use NNST with depth loss and fix encoder
+desc: Use NNST, use normed depth loss to modify rgb loss
 # ckpt_path: ckpts/colmap/LLFF_FLOWER_ST_NNST_8/epoch=7_slim.ckpt  # show_gui
 weight_path: null
 dataset_name: colmap              # [nerf | nsvf | colmap | nerfpp | rtmv] 
@@ -21,13 +21,13 @@ N_min: 16 #　最低分辨率。原始值: 16
 use_l1_loss: False
 use_depth_loss: True
 use_mod_ngp: False
-fix_encoder: True
+fix_encoder: False
 
 #-------------------------------training-------------------------------------
 
 batch_size: 16384                  # number of rays in a batch
 ray_sampling_strategy: same_image # [all_images | same_image] sample pixels in one image or all images
-num_epochs: 8                     # number of training epochs
+num_epochs: 5                     # number of training epochs
 lr: 1.e-2                         # learning rate
 
 #-------------------------------style transfer-------------------------------
