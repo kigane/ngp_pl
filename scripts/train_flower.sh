@@ -2,14 +2,14 @@
 timer_start=`date "+%Y-%m-%d %H:%M:%S"`
 
 config="--config config/nerf_st/flower.yml"
-method="--style_transfer_method nnst"
+method="--style_transfer_method gatys"
 use_filter="--use_guided_filter 0"
 
-python train.py $config $use_filter $method --loop 0 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_NNSTD15_8
-python train.py $config $use_filter $method --loop 1 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_NNSTD15_8
-python train.py $config $use_filter $method --loop 2 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_NNSTD15_8
-python train.py $config $use_filter $method --loop 3 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_NNSTD15_8
-python train.py $config $use_filter $method --loop 4 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_NNSTD15_8
+python train.py $config $use_filter $method --loop 0 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_GATYSD15_8
+python train.py $config $use_filter $method --loop 1 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_GATYSD15_8
+python train.py $config $use_filter $method --loop 2 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_GATYSD15_8
+python train.py $config $use_filter $method --loop 3 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_GATYSD15_8
+python train.py $config $use_filter $method --loop 4 --style_image data/styles/8.jpg --exp_name LLFF_FLOWER_GATYSD15_8
 
 timer_end=`date "+%Y-%m-%d %H:%M:%S"`
 

@@ -382,7 +382,8 @@ def total_variation(y):
 def generate_out_img_name(hparams):
     ind = os.path.basename(hparams.content_image).split('.')[0]
     style = os.path.basename(hparams.style_image).split('.')[0]
-    return f"{ind}_s_{style}_{hparams.optimizer}{hparams.save_ext}" # _s 作为风格化结果的标志
+    # return f"{ind}_s_{style}_{hparams.optimizer}{hparams.save_ext}" # _s 作为风格化结果的标志
+    return f"{ind}_s_{style}{hparams.save_ext}" # _s 作为风格化结果的标志
 
 
 def save_and_maybe_display(optimizing_img, img_id, hparams, should_display=False):

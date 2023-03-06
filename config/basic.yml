@@ -51,6 +51,7 @@ crop: False # do center crop to create squared image
 alpha: 1.0 # more content [0 ------> 1] more style
 
 # gayts
+num_steps: 500
 height: 600
 init_method: content
 vgg_ckpt_path: data/pretrained/adain/vgg_normalised.pth #FIXME repeat

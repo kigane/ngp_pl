@@ -25,7 +25,7 @@ fix_encoder: False
 
 #-------------------------------training-------------------------------------
 
-batch_size: 16384                  # number of rays in a batch
+batch_size: 8192                  # number of rays in a batch
 ray_sampling_strategy: same_image # [all_images | same_image] sample pixels in one image or all images
 num_epochs: 5                     # number of training epochs
 lr: 1.e-2                         # learning rate

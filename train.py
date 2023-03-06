@@ -13,7 +13,8 @@ from einops import rearrange
 # models
 from kornia.utils.grid import create_meshgrid3d
 import yaml
-from gayts import neural_style_transfer
+# from gayts import neural_style_transfer
+from gatys import neural_style_transfer
 from adain_inference import style_transfer_one_image
 from pama_inference import pama_infer_one_image
 from CCPL_inference import ccpl_inference_frames
@@ -45,7 +46,7 @@ from tqdm import tqdm
 
 install()
 ic.configureOutput(prefix=lambda: datetime.now().strftime('%H:%M:%S | '),
-                   includeContext=True)
+                   includeContext=False)
 
 import warnings; warnings.filterwarnings("ignore")
 
@@ -473,7 +474,7 @@ if __name__ == '__main__':
                 cv.imwrite(os.path.join(hparams.out_dir, f'{filtered_name}.png'), imgFilter)
                 cv.imwrite(Ics, img) #! override
     else:
-        if hparams.style_transfer_method == 'gayts':
+        if hparams.style_transfer_method == 'gatys':
             style_transfer = neural_style_transfer
         elif hparams.style_transfer_method == 'adain':
             style_transfer = style_transfer_one_image
@@ -486,6 +487,7 @@ if __name__ == '__main__':
 
         Ics = None
         for Ic, mask in tqdm(zip(rgb_paths, masks)):
+            hparams.content_image = Ic # for gatys 
             style_transfer(Ic, hparams.style_image, hparams)
             
             #! read alpha as mask

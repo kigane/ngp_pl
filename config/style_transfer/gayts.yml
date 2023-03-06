@@ -1,15 +1,17 @@
 # content_image: results/nerf/LEGO/raw/001.png
 # content_image: data/nerf_llff_data/trex/images/DJI_20200223_163553_010.jpg
-content_image: data/golden_gate.jpg
-style_image: data/styles/6.jpg
-height: 800
-init_method: content
-vgg_ckpt_path: data/pretrained/adain/vgg_normalised.pth
-optimizer: adam # [lbfgs | adam]
-iterations: 3000 # [ 1000 | 3000] correspond to optimizer
-saving_freq: -1 # -1:only save final image
+# content_image: data/golden_gate.jpg
+content_image: data/nerf_llff_data/orchids/images/IMG_4471.JPG
+style_image: data/styles/8.jpg
 save_ext: .jpg
 out_dir: results/gayts
+height: 800
+
+init_method: content
+vgg_ckpt_path: data/pretrained/adain/vgg_normalised.pth
+optimizer: lbfgs # [lbfgs | adam]
+iterations: 3000 # [ 1000 | 3000] correspond to optimizer
+saving_freq: -1 # -1:only save final image
 lr_st: 1
 lr: 10
 content_weight: 100_000
