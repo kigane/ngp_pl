@@ -1,0 +1,10 @@
+content_image: results/colmap/LLFF_FLOWER_PAMAD5_17/0/001.png  
+# content_image: results/001_s_14.jpg
+# content_image: results/001_s_14_s_14.jpg
+# content_image: results/001_s_14_s_14_s_14.jpg
+# content_image: results/001_s_14_s_14_s_14_s_14.jpg
+style_image: data/styles/14.jpg
+out_dir: results
+save_ext: .jpg
+
+

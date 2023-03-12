@@ -14,14 +14,14 @@ class Vgg16Pretrained(torch.nn.Module):
         super(Vgg16Pretrained, self).__init__()
 
         try:
-            vgg_pretrained_features = models.vgg16(pretrained=True).features
+            vgg_pretrained_features = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1).features
         except ssl.SSLError:
             # unsafe fix to allow pretrained pytorch model to be downloaded
             # exposes application to man-in-the-middle attacks while model is
             # being downloaded
             create_default_context = ssl._create_default_https_context
             ssl._create_default_https_context = ssl._create_unverified_context
-            vgg_pretrained_features = models.vgg16(pretrained=True).features
+            vgg_pretrained_features = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1).features
             ssl._create_default_https_context = create_default_context
 
         self.vgg_layers = vgg_pretrained_features

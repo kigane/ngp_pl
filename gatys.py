@@ -215,11 +215,27 @@ def neural_style_transfer(content_img_path, style_img_path, hparams):
 
 
 if __name__ == '__main__':
-    from tqdm import tqdm
     from utils import parse_args
+    import time
 
+    
     hparams = parse_args()
-    hparams.image_wh = (800, 600)
+    style_id = 107
+    content_lst = [
+        'results/001.png',
+        f'results/001_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}_s_{style_id}_s_{style_id}.jpg']
+    # hparams.content = 'results/001.png'
+    hparams.style_image = f'data/styles/{style_id}.jpg'
     hparams.out_dir = 'results'
-
-    neural_style_transfer(hparams.content_image, hparams.style_image, hparams)
+    hparams.save_ext = '.jpg'
+    hparams.image_wh = (800, 600)
+    hparams.num_steps = 1000
+    for c in content_lst:
+        time_start=time.time()
+        hparams.content_image = c
+        neural_style_transfer(hparams.content_image, hparams.style_image, hparams)
+        time_end=time.time()
+        print('time cost',time_end-time_start,'s')

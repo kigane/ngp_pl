@@ -2,7 +2,12 @@
 # content_image: data/nerf_llff_data/trex/images/DJI_20200223_163553_010.jpg
 # content_image: data/golden_gate.jpg
 content_image: data/nerf_llff_data/orchids/images/IMG_4471.JPG
-style_image: data/styles/8.jpg
+content_image: results/colmap/LLFF_FLOWER_PAMAD5_17/0/001.png 
+# content_image: results/001_s_17.jpg
+# content_image: results/001_s_17_s_17.jpg
+# content_image: results/001_s_17_s_17_s_17.jpg
+# content_image: results/001_s_17_s_17_s_17_s_17.jpg
+style_image: data/styles/17.jpg
 save_ext: .jpg
 out_dir: results/gayts
 height: 800

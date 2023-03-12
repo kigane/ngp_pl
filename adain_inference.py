@@ -81,14 +81,15 @@ def style_transfer_one_image(path, style_image, hparams):
 if __name__ == '__main__':
     from utils import parse_args
     hparams = parse_args()
+    style_id = 107
     content_lst = [
         'results/001.png',
-        'results/001_s_122.jpg',
-        'results/001_s_122_s_122.jpg',
-        'results/001_s_122_s_122_s_122.jpg',
-        'results/001_s_122_s_122_s_122_s_122.jpg']
+        f'results/001_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}_s_{style_id}_s_{style_id}.jpg']
     # hparams.content = 'results/001.png'
-    hparams.style = 'data/styles/122.jpg'
+    hparams.style = f'data/styles/{style_id}.jpg'
     hparams.out_dir = 'results'
     hparams.save_ext = '.jpg'
     hparams.image_wh = (800, 600)

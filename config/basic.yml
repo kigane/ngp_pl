@@ -8,10 +8,10 @@ random_bg: False                  # whether to train with random bg color (real 
 split: train                      # [train | trainval| trainvaltest] 
 test_split: test
 
-L: 16 # 多尺度特征层数。原始值: 16 
-F: 2  # 每层特征维度。原始值: 2 
-log2_T: 19 # 哈希表大小。原始值: 19 
-N_min: 16 #　最低分辨率。原始值: 16 最高分辨率为2048
+L: 16 
+F: 2  
+log2_T: 19 
+N_min: 16 
 use_l1_loss: False
 use_depth_loss: True
 use_mod_ngp: False

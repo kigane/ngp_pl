@@ -46,7 +46,7 @@ class NeRFLoss(nn.Module):
 
     def forward(self, results, target, **kwargs):
         d = {}
-        ld = 15
+        ld = 5
         d['rgb'] = (results['rgb']-target['rgb'])**2
         if 'depth' in target.keys() and kwargs.get('use_depth_loss'):
             d['depth'] = (results['depth']-target['depth']) ** 2 * ld

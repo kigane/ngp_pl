@@ -19,7 +19,7 @@ F: 2  # 每层特征维度。原始值: 2
 log2_T: 19 # 哈希表大小。原始值: 19 
 N_min: 16 #　最低分辨率。原始值: 16 
 use_l1_loss: False
-use_depth_loss: True
+use_depth_loss: False
 use_mod_ngp: False
 fix_encoder: False
 

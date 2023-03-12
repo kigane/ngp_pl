@@ -77,3 +77,30 @@ def nnst_infer_one_image(content, style, hparams):
     # Free gpu memory in case something else needs it later
     if misc.USE_GPU:
         torch.cuda.empty_cache()
+
+
+if __name__ == '__main__':
+    import utils
+    import time
+
+    time_start=time.time()
+
+    hparams = utils.parse_args()
+    style_id = 107
+    content_lst = [
+        'results/001.png',]
+        # f'results/001_s_{style_id}.jpg',
+        # f'results/001_s_{style_id}_s_{style_id}.jpg',
+        # f'results/001_s_{style_id}_s_{style_id}_s_{style_id}.jpg',
+        # f'results/001_s_{style_id}_s_{style_id}_s_{style_id}_s_{style_id}.jpg']
+    # hparams.content = 'results/001.png'
+    hparams.style = f'data/styles/{style_id}.jpg'
+    hparams.out_dir = 'results'
+    hparams.save_ext = '.jpg'
+    hparams.image_wh = (800, 600)
+    for c in content_lst:
+        hparams.content = c
+        nnst_infer_one_image(hparams.content, hparams.style, hparams)
+
+    time_end=time.time()
+    print('time cost',time_end-time_start,'s')

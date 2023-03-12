@@ -202,18 +202,21 @@ if __name__ == '__main__':
         tf.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     ])
     
-    dir = "results/colmap/LLFF_FLOWER_ST_NNST_8/0"
+    dir = "results/colmap/LLFF_FLOWER_GATYSD0_17/0"
+    # dir = "results/colmap/LLFF_FLOWER_NNSTD5_17/0"
     imgs = glob(dir + "/*")
     contents = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im and '_f_' not in im])
     Ic = [img_tf(Image.open(c).convert('RGB')) for c in contents]
     Ic = torch.stack(Ic)
     
-    dir = "results/colmap/LLFF_FLOWER_ST_NNST_8/1"
+    # dir = "results/ReReVST/ReReVST-17-flower"
+    # dir = "results/MCCNet/17"
+    # dir = "results/colmap/LLFF_FLOWER_GATYSD0_17/4"
+    dir = "results/colmap/LLFF_FLOWER_ADAIND0_17/2"
     imgs = glob(dir + "/*")
     # stylized = sorted([im for im in imgs if '_s_' in im])
-    stylized = sorted([im for im in imgs if '_s_' in im])
-    # stylized = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im and '_f_' not in im])
-    # stylized = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im])
+    stylized = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im and '_f_' not in im])
+    # stylized = imgs
     Is = [img_tf(Image.open(s).convert('RGB')) for s in stylized]
     Is = torch.stack(Is)
     
@@ -221,7 +224,7 @@ if __name__ == '__main__':
     
     bsize = 1
     all_errs = []
-    range_size = 1
+    range_size = 7
     for i in range(0, len(Ic)-range_size):
         img1_batch = Ic[i:i+bsize]
         simg1_batch = Is[i:i+bsize]
@@ -230,6 +233,5 @@ if __name__ == '__main__':
         # errs = temporal_warp_error(img1_batch, img2_batch)
         errs = style_warp_error(img1_batch, img2_batch, simg1_batch, simg2_batch)
         all_errs.extend(errs)
-        ic(errs, errs.mean())
     ic(sum(all_errs)/len(all_errs))
     

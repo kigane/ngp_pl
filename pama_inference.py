@@ -54,7 +54,18 @@ def pama_infer_one_image(content, style, hparams):
         
 if __name__ == '__main__':
     hparams = parse_args()
-    hparams.out_dir = 'results/pama'
+    style_id = 107
+    content_lst = [
+        'results/001.png',
+        f'results/001_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}_s_{style_id}.jpg',
+        f'results/001_s_{style_id}_s_{style_id}_s_{style_id}_s_{style_id}.jpg']
+    # hparams.content = 'results/001.png'
+    hparams.style = f'data/styles/{style_id}.jpg'
+    hparams.out_dir = 'results'
     hparams.save_ext = '.jpg'
     hparams.image_wh = (800, 600)
-    pama_infer_one_image(hparams.content, hparams.style, hparams)
+    for c in content_lst:
+        hparams.content = c
+        pama_infer_one_image(hparams.content, hparams.style, hparams)
