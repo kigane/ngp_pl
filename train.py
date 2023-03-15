@@ -35,7 +35,7 @@ from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 import cv2 as cv
 
 from datasets import dataset_dict
-from datasets.ray_utils import axisangle_to_R, get_rays
+from datasets.ray_utils import axisangle_to_R, get_rays, ndc_rays
 from losses import NeRFL1Loss, NeRFLoss
 from models.networks import NGP
 from models.networks2 import ModNGP
@@ -109,6 +109,9 @@ class NeRFSystem(LightningModule):
             poses[..., :3] = dR @ poses[..., :3]
             poses[..., 3] += self.dT[batch['img_idxs']]
         rays_o, rays_d = get_rays(directions, poses)
+        W, H = self.image_wh
+        rays_o, rays_d = ndc_rays(H, W, self.K[0][0], 1, rays_o, rays_d)
+
         kwargs = {'test_time': split!='train',
                   'random_bg': self.hparams.random_bg}
         if self.hparams.scale > 0.5:
@@ -147,6 +150,7 @@ class NeRFSystem(LightningModule):
         self.test_dataset = dataset(split=self.hparams.test_split, **kwargs)
         #! 保存渲染图片的大小
         self.image_wh = self.train_dataset.img_wh
+        self.K = self.train_dataset.K # ndc
         # ic(self.image_wh)
 
 

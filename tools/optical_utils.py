@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 from torchvision.models.optical_flow import Raft_Large_Weights, Raft_Small_Weights, raft_large, raft_small
@@ -196,27 +197,37 @@ if __name__ == '__main__':
     from icecream import ic
     from PIL import Image
     from torchvision import transforms as tf
+    import shutil
+    from tqdm import tqdm
+    import time
+
+    start = time.time()
     
     img_tf = tf.Compose([
         tf.ToTensor(),
         tf.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     ])
     
-    dir = "results/colmap/LLFF_FLOWER_GATYSD0_17/0"
+    # dir = "results/orchids"
+    dir = "results/orchids"
+    # dir = "results/colmap/LLFF_FLOWER_GATYSD0_17/0"
     # dir = "results/colmap/LLFF_FLOWER_NNSTD5_17/0"
     imgs = glob(dir + "/*")
     contents = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im and '_f_' not in im])
+    # for content in tqdm(contents):
+    #     shutil.copyfile(content, os.path.join(os.curdir, "results/" + os.path.basename(content)))
+    # exit()
     Ic = [img_tf(Image.open(c).convert('RGB')) for c in contents]
     Ic = torch.stack(Ic)
     
-    # dir = "results/ReReVST/ReReVST-17-flower"
-    # dir = "results/MCCNet/17"
+    # dir = "results/ReReVST/ReReVST-8-hotdog"
+    dir = "results/MCCNet/orchids/8"
     # dir = "results/colmap/LLFF_FLOWER_GATYSD0_17/4"
-    dir = "results/colmap/LLFF_FLOWER_ADAIND0_17/2"
+    # dir = "results/colmap/LLFF_FLOWER_ADAIND0_17/2"
     imgs = glob(dir + "/*")
     # stylized = sorted([im for im in imgs if '_s_' in im])
-    stylized = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im and '_f_' not in im])
-    # stylized = imgs
+    # stylized = sorted([im for im in imgs if im.endswith('png') and '_d.' not in im and '_s_' not in im and '_f_' not in im])
+    stylized = imgs
     Is = [img_tf(Image.open(s).convert('RGB')) for s in stylized]
     Is = torch.stack(Is)
     
@@ -225,7 +236,7 @@ if __name__ == '__main__':
     bsize = 1
     all_errs = []
     range_size = 7
-    for i in range(0, len(Ic)-range_size):
+    for i in tqdm(range(0, len(Ic)-range_size)):
         img1_batch = Ic[i:i+bsize]
         simg1_batch = Is[i:i+bsize]
         img2_batch = Ic[i+range_size:bsize+i+range_size]
@@ -233,5 +244,9 @@ if __name__ == '__main__':
         # errs = temporal_warp_error(img1_batch, img2_batch)
         errs = style_warp_error(img1_batch, img2_batch, simg1_batch, simg2_batch)
         all_errs.extend(errs)
+    ic(len(all_errs))
     ic(sum(all_errs)/len(all_errs))
+
+    end = time.time()
+    ic("Time:", end - start)
     
